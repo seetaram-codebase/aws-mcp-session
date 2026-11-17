@@ -1,0 +1,91 @@
+name: Deploy MCP server to ECS
+
+# Manual only -- builds server/, pushes to ECR, then applies the Terraform
+# in infra/terraform (same state/pool as cognito-infra.yml -- this is one
+# module, ECS is just more resources in it) with the new image tag, which
+# rolls the ECS service to the new task definition revision.
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Terraform action"
+        required: true
+        type: choice
+        options: [plan, apply, destroy]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Ensure ECR repository exists
+        if: inputs.action == 'apply'
+        run: |
+          aws ecr describe-repositories --repository-names mcp-finance-server --region "${{ vars.AWS_REGION }}" \
+            || aws ecr create-repository --repository-name mcp-finance-server --region "${{ vars.AWS_REGION }}"
+
+      - uses: aws-actions/amazon-ecr-login@v2
+        if: inputs.action == 'apply'
+        id: ecr-login
+
+      - name: Build and push image
+        if: inputs.action == 'apply'
+        working-directory: server
+        run: |
+          IMAGE="${{ steps.ecr-login.outputs.registry }}/mcp-finance-server:${{ github.sha }}"
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "image_tag=${{ github.sha }}" >> "$GITHUB_ENV"
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~1.10"
+
+      - name: Terraform init
+        working-directory: infra/terraform
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
+            -backend-config="key=cognito/workshop/terraform.tfstate" \
+            -backend-config="region=${{ vars.AWS_REGION }}"
+
+      - name: Terraform plan
+        if: inputs.action == 'plan'
+        working-directory: infra/terraform
+        run: terraform plan -var "aws_region=${{ vars.AWS_REGION }}"
+
+      - name: Terraform apply
+        if: inputs.action == 'apply'
+        working-directory: infra/terraform
+        run: terraform apply -auto-approve -var "aws_region=${{ vars.AWS_REGION }}" -var "image_tag=${{ env.image_tag }}"
+
+      - name: Terraform destroy
+        if: inputs.action == 'destroy'
+        working-directory: infra/terraform
+        run: terraform destroy -auto-approve -var "aws_region=${{ vars.AWS_REGION }}"
+
+      - name: Publish outputs to job summary
+        if: inputs.action == 'apply'
+        working-directory: infra/terraform
+        run: |
+          {
+            echo "## MCP server deployed"
+            echo ""
+            echo "Public URL (CloudFront, HTTPS): $(terraform output -raw mcp_server_public_url)"
+            echo ""
+            echo "Optional custom domain -- add this CNAME at Porkbun if you want mcp.seetaram.dev:"
+            echo '```'
+            terraform output -raw porkbun_dns_record_for_custom_domain
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

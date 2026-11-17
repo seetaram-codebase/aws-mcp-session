@@ -168,6 +168,133 @@ def ensure_role(iam, account_id, region, repo, role_name, bucket_name, provider_
                     f"arn:aws:s3:::{bucket_name}/*",
                 ],
             },
+            # --- Added for the ECS Fargate deployment (ecs.tf) ---
+            # Honest tradeoff, not hidden: ELB, CloudFront, and several EC2
+            # security-group/network actions don't support resource-level
+            # IAM permissions at all (AWS's own design, not a shortcut taken
+            # here) -- those statements below are Resource "*" because
+            # there's no narrower option. ECR, ECS, Secrets Manager, and IAM
+            # role management ARE scoped to this demo's specific resource
+            # names. This role's blast radius is meaningfully wider than the
+            # Cognito-only version; still pinned to this one repo via the
+            # trust policy above.
+            {
+                "Sid": "EcrScoped",
+                "Effect": "Allow",
+                "Action": [
+                    "ecr:CreateRepository", "ecr:DeleteRepository", "ecr:DescribeRepositories",
+                    "ecr:DescribeImages", "ecr:BatchDeleteImage", "ecr:ListTagsForResource",
+                    "ecr:TagResource", "ecr:PutLifecyclePolicy", "ecr:BatchCheckLayerAvailability",
+                    "ecr:GetDownloadUrlForLayer", "ecr:BatchGetImage", "ecr:PutImage",
+                    "ecr:InitiateLayerUpload", "ecr:UploadLayerPart", "ecr:CompleteLayerUpload",
+                ],
+                "Resource": f"arn:aws:ecr:{region}:{account_id}:repository/mcp-finance-server",
+            },
+            {
+                "Sid": "EcrAuth",
+                "Effect": "Allow",
+                # GetAuthorizationToken (needed for `docker login`) has no
+                # resource-level permission support -- must be "*".
+                "Action": "ecr:GetAuthorizationToken",
+                "Resource": "*",
+            },
+            {
+                "Sid": "EcsScoped",
+                "Effect": "Allow",
+                "Action": [
+                    "ecs:CreateCluster", "ecs:DeleteCluster", "ecs:DescribeClusters",
+                    "ecs:CreateService", "ecs:UpdateService", "ecs:DeleteService",
+                    "ecs:DescribeServices", "ecs:DescribeTaskDefinition", "ecs:DeregisterTaskDefinition",
+                    "ecs:ListTasks", "ecs:DescribeTasks", "ecs:TagResource", "ecs:UntagResource",
+                    "ecs:ListTagsForResource",
+                ],
+                "Resource": [
+                    f"arn:aws:ecs:{region}:{account_id}:cluster/mcp-demo-cluster",
+                    f"arn:aws:ecs:{region}:{account_id}:service/mcp-demo-cluster/mcp-finance-server",
+                    f"arn:aws:ecs:{region}:{account_id}:task-definition/mcp-finance-server:*",
+                    f"arn:aws:ecs:{region}:{account_id}:task/mcp-demo-cluster/*",
+                ],
+            },
+            {
+                "Sid": "EcsUnscopedActions",
+                "Effect": "Allow",
+                # RegisterTaskDefinition/ListClusters/ListTaskDefinitions
+                # don't support resource-level permissions either.
+                "Action": [
+                    "ecs:RegisterTaskDefinition", "ecs:ListClusters", "ecs:ListTaskDefinitions",
+                    "ecs:ListServices",
+                ],
+                "Resource": "*",
+            },
+            {
+                "Sid": "ElbAndCloudFront",
+                "Effect": "Allow",
+                # Neither service supports resource-level IAM permissions
+                # for the actions Terraform needs here (create/describe/
+                # modify ALB, target group, listener, distribution).
+                "Action": ["elasticloadbalancing:*", "cloudfront:*"],
+                "Resource": "*",
+            },
+            {
+                "Sid": "Ec2NetworkingUnscoped",
+                "Effect": "Allow",
+                # Security group CRUD + the describe calls the VPC/subnet/
+                # prefix-list data sources need. SG resource-level scoping
+                # would require tag-based conditions set up before the SGs
+                # exist -- not worth it for a workshop role; same honesty
+                # note as the ELB/CloudFront statement above.
+                "Action": [
+                    "ec2:DescribeVpcs", "ec2:DescribeSubnets", "ec2:DescribeAvailabilityZones",
+                    "ec2:DescribeManagedPrefixLists", "ec2:DescribeSecurityGroups",
+                    "ec2:DescribeSecurityGroupRules", "ec2:CreateSecurityGroup",
+                    "ec2:DeleteSecurityGroup", "ec2:AuthorizeSecurityGroupIngress",
+                    "ec2:AuthorizeSecurityGroupEgress", "ec2:RevokeSecurityGroupIngress",
+                    "ec2:RevokeSecurityGroupEgress", "ec2:CreateTags",
+                ],
+                "Resource": "*",
+            },
+            {
+                "Sid": "SecretsManagerScoped",
+                "Effect": "Allow",
+                "Action": [
+                    "secretsmanager:DescribeSecret", "secretsmanager:PutSecretValue",
+                    "secretsmanager:DeleteSecret", "secretsmanager:GetSecretValue",
+                    "secretsmanager:TagResource",
+                ],
+                # Secrets Manager appends a random suffix to the ARN at
+                # creation, hence the wildcard.
+                "Resource": f"arn:aws:secretsmanager:{region}:{account_id}:secret:mcp-server/cognito-client-secret-*",
+            },
+            {
+                "Sid": "SecretsManagerCreate",
+                "Effect": "Allow",
+                "Action": "secretsmanager:CreateSecret",
+                "Resource": "*",
+            },
+            {
+                "Sid": "IamRolesScoped",
+                "Effect": "Allow",
+                "Action": [
+                    "iam:CreateRole", "iam:DeleteRole", "iam:GetRole", "iam:PutRolePolicy",
+                    "iam:GetRolePolicy", "iam:DeleteRolePolicy", "iam:AttachRolePolicy",
+                    "iam:DetachRolePolicy", "iam:ListRolePolicies", "iam:ListAttachedRolePolicies",
+                    "iam:TagRole", "iam:PassRole",
+                ],
+                "Resource": [
+                    f"arn:aws:iam::{account_id}:role/mcp-server-ecs-execution",
+                    f"arn:aws:iam::{account_id}:role/mcp-server-ecs-task",
+                ],
+            },
+            {
+                "Sid": "LogsScoped",
+                "Effect": "Allow",
+                "Action": [
+                    "logs:CreateLogGroup", "logs:DeleteLogGroup", "logs:DescribeLogGroups",
+                    "logs:PutRetentionPolicy", "logs:TagResource", "logs:ListTagsForResource",
+                    "logs:DescribeLogStreams",
+                ],
+                "Resource": f"arn:aws:logs:{region}:{account_id}:log-group:/ecs/mcp-finance-server*",
+            },
         ],
     }
 

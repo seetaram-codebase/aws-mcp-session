@@ -27,3 +27,23 @@ output "test_user_temporary_password" {
   value     = random_password.test_user.result
   sensitive = true
 }
+
+output "mcp_server_public_url" {
+  description = "ECS-deployed server, over CloudFront's default HTTPS domain"
+  value       = local.mcp_public_url
+}
+
+output "ecr_repository_url" {
+  value = aws_ecr_repository.mcp_server.repository_url
+}
+
+output "porkbun_dns_record_for_custom_domain" {
+  description = <<-EOT
+    Optional upgrade: to use mcp.seetaram.dev instead of the CloudFront
+    default domain, add this CNAME at Porkbun, then separately request an
+    ACM cert for mcp.seetaram.dev (DNS-validated -- Porkbun again) and add
+    it as a CloudFront alternate domain name. Not automated here because
+    Porkbun DNS isn't something Terraform/AWS can reach.
+  EOT
+  value       = "mcp.seetaram.dev  CNAME  ${aws_cloudfront_distribution.mcp_server.domain_name}"
+}

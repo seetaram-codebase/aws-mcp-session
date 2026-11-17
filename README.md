@@ -9,10 +9,12 @@ facts, and sources.
 
 | Path | What it is |
 |---|---|
-| `server/` | Speaker's own reference demo -- a Personal Finance Guide MCP server (FastMCP), OAuth 2.1-protected via AWS Cognito. Built live on stage in the "Build: FastMCP server" segment. |
+| `server/` | Speaker's own reference demo -- a Personal Finance Guide MCP server (FastMCP), OAuth 2.1-protected via AWS Cognito. Built live on stage in the "Build: FastMCP server" segment; also what's deployed to ECS (see `infra/terraform/ecs.tf`). |
 | `kickstart/` | What attendees clone for the live hands-on segment. Generic OAuth-protected FastMCP template + README -- add your own tool, connect your IDE, done. |
-| `infra/` | Provisions the single, shared Cognito User Pool that acts as OAuth Authorization Server for both of the above (speaker gets a dedicated login; attendees self-signup). Two ways to run it: a one-shot `boto3` script, or Terraform (what CI uses). |
-| `.github/workflows/cognito-infra.yml` | Manual (`workflow_dispatch`) pipeline that plans/applies/destroys the Terraform in `infra/terraform/`, authenticating to AWS via OIDC -- no access keys stored in this repo. |
+| `electron-client/` | A standalone desktop chat agent -- Bedrock Claude reasoning + the MCP server's tools over the same OAuth flow, no IDE involved. The "MCP isn't just an IDE feature" demo. |
+| `infra/` | Provisions the single, shared Cognito User Pool (OAuth Authorization Server) plus, now, the ECS Fargate + ALB + CloudFront deployment of `server/`. Cognito: a one-shot `boto3` script, or Terraform (what CI uses). ECS: Terraform only. |
+| `.github/workflows/cognito-infra.yml` | Manual (`workflow_dispatch`) pipeline for the Cognito pool: plan/apply/destroy, OIDC to AWS, no stored access keys. |
+| `.github/workflows/deploy-mcp-ecs.yml` | Manual pipeline that builds `server/`'s Docker image, pushes to ECR, and applies the same Terraform state with the new image tag -- rolls the ECS service. |
 | `session-outline.html` / `.txt`, `session-cfp.txt`, `talk.txt.txt` | The talk content itself: abstract, agenda, corrected facts, sources. |
 
 ## Running the Cognito infra

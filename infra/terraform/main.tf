@@ -22,6 +22,8 @@ locals {
   callback_urls = [
     "http://localhost:8000/auth/callback",
     "http://127.0.0.1:8000/auth/callback",
+    # ECS-deployed server, fronted by CloudFront for HTTPS -- see ecs.tf.
+    "https://${aws_cloudfront_distribution.mcp_server.domain_name}/auth/callback",
   ]
 
   mcp_base_url = "http://localhost:8000"
