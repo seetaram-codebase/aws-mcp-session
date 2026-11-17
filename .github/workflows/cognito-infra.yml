@@ -1,0 +1,96 @@
+name: Cognito demo infra (Terraform)
+
+# Manual only -- this provisions/destroys real AWS resources, so it never
+# runs on a plain push. Two independent pools share this one workflow:
+# "solo" (speaker's reference demo) and "workshop" (shared, self-signup
+# pool for the live kickstart segment) -- picked per-run via the `mode`
+# input, with separate Terraform state keys so they don't collide.
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Which Cognito pool"
+        required: true
+        type: choice
+        options: [solo, workshop]
+      action:
+        description: "Terraform action"
+        required: true
+        type: choice
+        options: [plan, apply, destroy]
+
+permissions:
+  id-token: write   # required for OIDC -> AWS role assumption
+  contents: read
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/terraform
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~1.10"
+
+      - name: Terraform init
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
+            -backend-config="key=cognito/${{ inputs.mode }}/terraform.tfstate" \
+            -backend-config="region=${{ vars.AWS_REGION }}"
+
+      - name: Terraform plan
+        if: inputs.action == 'plan'
+        run: terraform plan -var-file="${{ inputs.mode }}.tfvars" -var "aws_region=${{ vars.AWS_REGION }}"
+
+      - name: Terraform apply
+        if: inputs.action == 'apply'
+        run: terraform apply -auto-approve -var-file="${{ inputs.mode }}.tfvars" -var "aws_region=${{ vars.AWS_REGION }}"
+
+      - name: Terraform destroy
+        if: inputs.action == 'destroy'
+        run: terraform destroy -auto-approve -var-file="${{ inputs.mode }}.tfvars" -var "aws_region=${{ vars.AWS_REGION }}"
+
+      - name: Publish outputs to job summary
+        if: inputs.action == 'apply'
+        run: |
+          POOL_ID=$(terraform output -raw cognito_user_pool_id)
+          CLIENT_ID=$(terraform output -raw cognito_client_id)
+          CLIENT_SECRET=$(terraform output -raw cognito_client_secret)
+          BASE_URL=$(terraform output -raw mcp_base_url)
+
+          # These are workshop/demo values handed to attendees on a slide --
+          # not production secrets -- so surfacing them in the summary is
+          # intentional, not a leak. Still masked from raw step logs.
+          echo "::add-mask::$CLIENT_SECRET"
+
+          {
+            echo "## Cognito (${{ inputs.mode }}) -- ready"
+            echo ""
+            echo '```'
+            echo "COGNITO_USER_POOL_ID=$POOL_ID"
+            echo "COGNITO_CLIENT_ID=$CLIENT_ID"
+            echo "COGNITO_CLIENT_SECRET=$CLIENT_SECRET"
+            echo "AWS_REGION=${{ vars.AWS_REGION }}"
+            echo "MCP_BASE_URL=$BASE_URL"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "${{ inputs.mode }}" = "solo" ]; then
+            {
+              echo ""
+              echo "Test user: $(terraform output -raw test_user_email)"
+              echo "Temporary password: $(terraform output -raw test_user_temporary_password)"
+              echo "(First Hosted UI login will prompt to set a permanent password -- do this before you're on stage.)"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi

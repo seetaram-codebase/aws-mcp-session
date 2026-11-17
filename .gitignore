@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+infra/cognito_demo_env.json
+infra/cognito_workshop_env.json
+kickstart/.env
+
+# Terraform
+infra/terraform/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json

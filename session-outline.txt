@@ -1,0 +1,282 @@
+BUILDING AN AWS-NATIVE MCP SERVER
+From concept to production: designing, deploying, and securing a custom Model
+Context Protocol server on Amazon ECS Fargate -- closing with where the MCP
+spec itself is headed next.
+
+Format: 45-60 min talk + live demo
+Stack: Python . FastMCP . ECS Fargate . ALB . IAM
+Status: outline v2, corrected
+
+
+====================================================
+00. WHAT I CORRECTED IN talk.txt
+====================================================
+
+1) Transport claim
+   WAS: "Moving beyond basic WebSockets"
+   NOW: MCP never standardized on WebSockets. The real lineage is
+        stdio -> HTTP+SSE -> Streamable HTTP.
+   WHY: Final SEP-2575 "Make MCP Stateless" and Final SEP-2567 "Sessionless
+        MCP via Explicit State Handles" are the actual specs behind your
+        stateless-ECS story. Cite the SEP numbers instead of the WebSocket
+        line.
+
+2) Closing topic
+   WAS: "End with SEP-2076"
+   NOW: SEP-2076 ("Agent Skills as a First-Class MCP Primitive") was the
+        QUESTION -- it spawned the Skills Over MCP Working Group. The ANSWER
+        is SEP-2640, the Skills Extension, which went Final on 2026-09-13.
+   WHY: Frame the close as "the debate that became a shipped spec":
+        2076 -> 2640.
+
+3) Enterprise Control
+   WAS: Undefined bullet, no mechanism named
+   NOW: This is OAuth 2.1 remote auth for MCP clients, with enterprise IdP
+        policy support. Final SEP-990 is the actual spec.
+   WHY: See section 05 below for the corrected explanation -- kept light,
+        not a demo centerpiece, per your instruction not to stress ADFS.
+
+
+====================================================
+01. CORRECTED ABSTRACT
+====================================================
+
+AI coding assistants like Claude Code, Cursor, and Copilot have changed how
+we write code -- but until recently, they couldn't securely touch or manage
+our cloud infrastructure. Giving an AI agent access to AWS APIs usually
+meant exposing highly privileged credentials to a local workspace, or
+risking multi-step hallucinations with no guardrails.
+
+Enter the Model Context Protocol (MCP). In this technical, demo-driven
+session, we break down how to design, code, and productionize a custom
+AWS-native MCP server. You'll see the move from a brittle local prototype
+to a secure, enterprise-ready cloud architecture -- built on the Streamable
+HTTP transport that replaced MCP's earlier stdio/SSE model, so your tools
+can run stateless, horizontally, inside your AWS perimeter.
+
+We close by looking at where the protocol itself is going: the Skills Over
+MCP effort, and how a 2026 debate about what belongs in the protocol
+(SEP-2076) turned into a shipped extension (SEP-2640).
+
+
+====================================================
+02. WHAT THE AUDIENCE WALKS AWAY WITH
+====================================================
+
+- The MCP blueprint. How MCP bridges LLM reasoning and live AWS API calls --
+  tools, resources, and why that split exists.
+
+- Building from scratch. A custom MCP server in Python with FastMCP,
+  exposing live AWS diagnostics as tools.
+
+- Stateless scaling on AWS. Why Streamable HTTP (post SEP-2575/2567) is
+  what makes ECS Fargate + ALB horizontal scaling possible for MCP, where
+  SSE-session servers couldn't.
+
+- Zero-trust guardrails. Least-privilege via IAM task roles -- no long-lived
+  credentials baked into the container.
+
+- Enterprise Control. Connecting a cloud-hosted MCP server to local IDEs
+  (Cursor, Claude Desktop) over a real, working OAuth 2.1 flow (Cognito as
+  the Authorization Server) -- and then doing it themselves, live, against
+  a shared Cognito pool, before touching the ADFS/Okta/IAM Identity Center
+  enterprise-IdP story as a one-line provider swap.
+
+- Where the spec is headed. Skills over MCP -- SEP-2076's open question,
+  resolved as the Final SEP-2640 Skills Extension.
+
+
+====================================================
+03. RUN ORDER -- 50 MIN TARGET
+====================================================
+
+Sized for a 45-60 min slot with buffer for Q&A. Demo is pre-deployed
+infrastructure with a live walkthrough, not a from-zero build.
+
+00:00  (5 min)  Hook + the credential problem
+                Why "just give the agent an access key" breaks down fast.
+
+00:05  (6 min)  MCP blueprint
+                Tools vs. resources vs. prompts; client-server handshake.
+
+00:11  (9 min)  Build: FastMCP server, live
+                Personal-finance-guide MCP tool (get_portfolio, get_quote,
+                analyze_allocation) on stage, run it locally over stdio.
+
+00:20  (8 min)  Ship it: ECS Fargate + ALB
+                Same server, Streamable HTTP, pre-deployed -- walk the
+                console/CDK, hit it from a terminal.
+
+00:28  (5 min)  Zero-trust: IAM task role
+                Show the least-privilege policy; call a tool that would
+                fail without it.
+
+00:33  (18 min) LIVE: everyone builds an OAuth-protected MCP server
+                Real build, not a slide. Attendees clone kickstart/, run
+                server_template.py against a shared pre-provisioned
+                Cognito User Pool, self-sign-up their own Hosted UI login,
+                connect Claude Desktop/Cursor over OAuth 2.1 (SEP-990),
+                then add one tool of their own. Speaker's own
+                finance_mcp_server.py is the worked reference if anyone
+                gets stuck. One-line callout: swapping AWSCognitoProvider
+                for Okta/Auth0/WorkOS is how an enterprise IdP plugs in --
+                no server-code changes, which is the ADFS/IAM Identity
+                Center bullet made concrete.
+
+00:51  (4 min)  Closing: Skills over MCP
+                SEP-2076 -> SEP-2640, and what it means for where MCP goes
+                next.
+
+00:55  (5+ min) Q&A
+
+TIMING NOTE
+This now runs to the 60-min ceiling of the stated 45-60 min slot, almost
+entirely on the back of the hands-on segment. If the room runs short,
+cut the hands-on to "add one tool" only (skip step 4/self-test-first,
+go straight to IDE) and point to kickstart/README.md as a take-home for
+the rest.
+
+
+====================================================
+04. DEMO ARCHITECTURE -- DOABLE ON ONE AWS ACCOUNT
+====================================================
+
+Everything below is standard, well-documented AWS building blocks. No
+custom infra needed beyond what's listed.
+
+  Claude Desktop / Cursor   (Remote MCP config, OAuth bearer token)
+            |
+            v
+  Application Load Balancer (TLS termination, routes to ECS service)
+            |
+            v
+  ECS Fargate task          (FastMCP server, Streamable HTTP, stateless)
+            |
+            v
+  IAM task role             (Least-privilege: e.g. read-only
+                              CloudWatch/EC2 describe)
+            |
+            v
+  AWS APIs                  (The actual diagnostics being surfaced as
+                              tools)
+
+AUTH NOTE
+For the live demo, terminate OAuth at a Cognito User Pool (or an ALB OIDC
+listener) issuing short-lived tokens to the MCP client -- this is enough to
+demonstrate the real OAuth 2.1 flow MCP clients expect (SEP-990). Enterprise
+IdPs like ADFS, Okta, or Azure AD would federate into Cognito the same way
+in production; that federation step is a one-line mention on the slide, not
+something to stand up live.
+
+CONTAINER PATH
+Write the FastMCP server -> build & push to ECR -> `ecs create-service`
+with the task role attached -> register target group behind the ALB. All
+scriptable with the CLI or CDK ahead of the talk; the "build" segment on
+stage only adds one new tool to an already-running server.
+
+
+====================================================
+05. ENTERPRISE CONTROL, EXPLAINED
+====================================================
+
+This was the unclear bullet in the original outline. Here's the corrected,
+concrete version:
+
+THE PROBLEM
+Once your MCP server is remote (on ECS, not on localhost), the local IDE --
+Claude Desktop, Cursor -- needs a way to authenticate to it that isn't
+"paste a static API key into a config file."
+
+THE MECHANISM
+MCP's remote auth model is OAuth 2.1. The client does a standard
+authorization-code + PKCE flow, gets a short-lived token, and sends it as a
+bearer token on every request. SEP-990 (Final) specifically adds support
+for enterprise IdP policy controls inside that flow -- conditional access,
+MFA enforcement, that kind of thing.
+
+STATUS: THIS IS NOW A REAL, WORKING BUILD -- NOT JUST A SLIDE
+Updated from the original plan. There are two real OAuth-protected FastMCP
+servers in this repo now, both using FastMCP's built-in AWSCognitoProvider
+(a Cognito-specific OAuth proxy -- Cognito has no native Dynamic Client
+Registration, so the provider fakes RFC 7591 on top of one pre-registered
+app client):
+
+  server/finance_mcp_server.py   Speaker's own reference demo (the one
+                                  built live in the 00:11 segment). Solo
+                                  Cognito pool via infra/setup_cognito.py.
+
+  kickstart/server_template.py   What attendees run themselves at 00:33.
+                                  Same auth wiring, generic placeholder
+                                  tool (`ping`). Points at ONE shared
+                                  Cognito pool (infra/setup_cognito.py
+                                  --workshop) with self-service sign-up
+                                  turned on, so each attendee creates their
+                                  own Hosted UI login with no AWS account
+                                  needed -- see kickstart/README.md.
+
+  Both torn down cleanly afterward with infra/teardown_cognito.py.
+
+WHERE ADFS/IAM FIT
+ADFS speaks SAML, not OAuth, so in a real enterprise it sits one layer
+back -- federated into something OAuth-native (Cognito User Pool, or an
+OIDC-capable IdP) which is what actually issues the token the MCP client
+holds. IAM Identity Center is the AWS-native alternative to that same
+pattern. For the talk: name-check ADFS/IAM Identity Center as "this is
+where your corporate identity plugs in," and use the Cognito-vs-Okta
+swap (one provider class, same FastMCP server) as the concrete proof --
+no need to stand up a federation trust live.
+
+
+====================================================
+06. CLOSING: SKILLS OVER MCP
+====================================================
+
+The protocol's own "what's next" story -- a real, recently-resolved debate,
+good closer material.
+
+2026-02-01  IG formed
+            Experimental Skills-over-MCP repo created. Native skills
+            support in host apps shows demand; question raised: does MCP
+            need a first-class "skill" primitive, or do existing
+            primitives (resources, prompts) already cover it?
+
+[Draft]     SEP-2076 -- "Agent Skills as a First-Class MCP Primitive"
+            The PR that framed the open question. Spawned the Skills Over
+            MCP Working Group (Anthropic, AWS, Google, Bloomberg,
+            Databricks, GitHub, and others at the table).
+
+[Final]     SEP-2640 -- Skills Extension, merged 2026-09-13
+            The answer: a Resources-based extension
+            (io.modelcontextprotocol/skills). Skills stay lightweight --
+            no server, no auth, no runtime -- but can now be discovered
+            and distributed THROUGH an MCP server, instead of competing
+            with it.
+
+One-sentence version for the slide:
+  "Knowledge is a Skill, connectivity is MCP" -- and Skills-over-MCP is the
+  bridge that lets a skill travel inside the same channel your tools
+  already use.
+
+
+====================================================
+07. SOURCES
+====================================================
+
+- Skills Over MCP Working Group charter
+  https://modelcontextprotocol.io/community/working-groups/skills-over-mcp
+
+- SEP index
+  https://modelcontextprotocol.io/seps
+
+- SEP-2640 -- Skills Extension (Final)
+  https://modelcontextprotocol.io/seps/2640-skills-extension
+
+- SEP-2076 PR -- Agent Skills as a First-Class MCP Primitive
+  https://github.com/modelcontextprotocol/modelcontextprotocol/pull/2076
+
+- SEP-2575 "Make MCP Stateless", SEP-2567 "Sessionless MCP via Explicit
+  State Handles", SEP-990 "Enable enterprise IdP policy controls during MCP
+  OAuth flows" -- all Final, modelcontextprotocol.io/seps
+
+- AWS Federated Authentication with AD FS
+  https://aws.amazon.com/blogs/security/aws-federated-authentication-with-active-directory-federation-services-ad-fs/

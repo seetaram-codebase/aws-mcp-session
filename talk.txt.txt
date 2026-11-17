@@ -1,0 +1,12 @@
+Building an AWS-Native MCP Server: From Concept to Production
+📋 About the Event
+AI coding assistants like Claude Code, Cursor, and Copilot have changed how we write code—but until recently, they couldn't securely touch or manage our cloud infrastructure. Giving an AI agent access to AWS APIs usually meant exposing highly privileged credentials to a local workspace or risking massive multi-step hallucinations.
+Enter the Model Context Protocol (MCP).
+In this technical, demo-driven session, we will break down how to design, code, and productionize custom, AWS-native MCP servers. You will discover how to transition from brittle local setups to a fully secure, enterprise-grade cloud architecture. Moving beyond basic WebSockets, we will showcase how to leverage stateless HTTP transport to build scalable MCP tools that run directly inside your AWS perimeter.
+Whether you are looking to build a custom internal tool for your DevOps team or scale secure AI interaction across an enterprise, this session provides a step-by-step roadmap from local prototype to cloud production.
+🎯 What You Will Learn
+* The MCP Blueprint: How the Model Context Protocol bridges the gap between LLM reasoning and real-time AWS API environments.
+* Building from Scratch: Coding a custom MCP server in Python using FastMCP to securely ingest and parse live AWS resource diagnostics.
+* Stateless Scaling on AWS: Why stateless HTTP transport is a game-changer for MCP, and how to deploy your server container using Amazon ECS Fargate behind an Application Load Balancer (ALB).
+* Zero-Trust Guardrails: Securing your AI agents using native AWS IAM Task Roles—ensuring absolute least-privilege control without hardcoded credentials.
+* Enterprise Control: Connecting your cloud-hosted MCP backend directly to local IDE environments (Cursor, Claude Desktop) for real-world enterprise troubleshooting.

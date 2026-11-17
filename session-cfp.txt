@@ -1,0 +1,68 @@
+SESSION SUBMISSION
+
+
+TITLE
+-----
+Building an AWS-Native MCP Server: From Concept to Production
+
+
+DESCRIPTION
+-----------
+AI coding assistants like Claude Code, Cursor, and Copilot have changed how
+we write code -- but until recently, they couldn't securely touch or manage
+our cloud infrastructure. Giving an AI agent access to AWS APIs usually
+meant exposing highly privileged credentials to a local workspace, or
+risking multi-step hallucinations with no guardrails.
+
+Enter the Model Context Protocol (MCP). In this technical, demo-driven
+session, we break down how to design, code, and productionize a custom
+AWS-native MCP server -- moving from a brittle local prototype to a secure,
+enterprise-ready cloud architecture.
+
+We'll build a Python MCP server with FastMCP, deploy it statelessly on
+Amazon ECS Fargate behind an Application Load Balancer, and lock it down
+with IAM task roles so the agent never touches a long-lived credential.
+Then we'll connect it back to local IDEs like Claude Desktop and Cursor
+over OAuth 2.1 -- the same enterprise-auth path that lets identity
+providers like ADFS or IAM Identity Center sit behind it.
+
+We close by looking at where the protocol itself is going next: the
+"Skills over MCP" effort, and how a community debate about what belongs in
+the protocol turned into a shipped spec extension.
+
+
+KEY TAKEAWAYS
+-------------
+1. How MCP bridges LLM reasoning and live AWS API calls, and why tools and
+   resources are split the way they are.
+
+2. How to build a custom MCP server in Python with FastMCP that exposes
+   live AWS diagnostics as callable tools.
+
+3. Why a stateless HTTP transport is what makes MCP servers horizontally
+   scalable on ECS Fargate + ALB, where earlier session-based transports
+   couldn't.
+
+4. How to enforce zero-trust, least-privilege access for an AI agent using
+   native IAM task roles -- no hardcoded credentials, anywhere.
+
+5. How enterprise identity (ADFS, Okta, IAM Identity Center) plugs into a
+   remote MCP server's OAuth flow, so local IDEs can connect securely at
+   enterprise scale.
+
+6. Where the MCP spec is headed next: the Skills over MCP initiative, and
+   what it means for how agents will discover and reuse workflows.
+
+
+FORMAT / LEVEL
+---------------
+Format: Technical talk with live demo
+Length: 45-60 minutes (talk + demo + Q&A)
+Level: Intermediate -- some familiarity with AWS (ECS, IAM, ALB) and basic
+Python helpful, no prior MCP experience required
+
+
+SPEAKER-FACING NOTE (not for public listing)
+---------------------------------------------
+Full run-of-show, corrected facts, demo architecture, and citations are in
+session-outline.txt / the published runbook artifact in this same folder.
