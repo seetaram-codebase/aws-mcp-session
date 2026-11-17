@@ -245,7 +245,8 @@ def ensure_role(iam, account_id, region, repo, role_name, bucket_name, provider_
                 # note as the ELB/CloudFront statement above.
                 "Action": [
                     "ec2:DescribeVpcs", "ec2:DescribeSubnets", "ec2:DescribeAvailabilityZones",
-                    "ec2:DescribeManagedPrefixLists", "ec2:DescribeSecurityGroups",
+                    "ec2:DescribeManagedPrefixLists", "ec2:GetManagedPrefixListEntries",
+                    "ec2:DescribeSecurityGroups",
                     "ec2:DescribeSecurityGroupRules", "ec2:CreateSecurityGroup",
                     "ec2:DeleteSecurityGroup", "ec2:AuthorizeSecurityGroupIngress",
                     "ec2:AuthorizeSecurityGroupEgress", "ec2:RevokeSecurityGroupIngress",
