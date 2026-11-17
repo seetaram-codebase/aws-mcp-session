@@ -91,6 +91,17 @@ def ensure_state_bucket(s3, bucket_name, region):
 
 
 def ensure_role(iam, account_id, region, repo, role_name, bucket_name, provider_arn):
+    # GitHub now embeds internal numeric owner/repo IDs into the `sub` claim
+    # (e.g. "repo:org@123/repo@456:ref:refs/heads/main"), so a plain
+    # name-based StringLike against `sub` silently never matches -- every
+    # assume-role call fails with a generic "not authorized" error until
+    # you decode an actual token to see this (done via a debug workflow
+    # step). AWS also *requires* the trust policy's condition to pin either
+    # `sub` or `job_workflow_ref` to something other than a bare "*" when
+    # the principal is a web-identity OIDC provider -- a wildcard-only
+    # condition is rejected outright (MalformedPolicyDocument). So: `sub`
+    # is still pinned here (owner/repo name prefixes + exact branch, IDs
+    # wildcarded), and `repository` is the precise, rename-proof check.
     trust_policy = {
         "Version": "2012-10-17",
         "Statement": [
@@ -100,10 +111,13 @@ def ensure_role(iam, account_id, region, repo, role_name, bucket_name, provider_
                 "Action": "sts:AssumeRoleWithWebIdentity",
                 "Condition": {
                     "StringEquals": {
-                        "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+                        "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
+                        "token.actions.githubusercontent.com:repository": repo,
                     },
                     "StringLike": {
-                        "token.actions.githubusercontent.com:sub": f"repo:{repo}:*"
+                        "token.actions.githubusercontent.com:sub": (
+                            f"repo:{repo.split('/')[0]}@*/{repo.split('/')[1]}@*:ref:refs/heads/*"
+                        ),
                     },
                 },
             }
@@ -130,9 +144,13 @@ def ensure_role(iam, account_id, region, repo, role_name, bucket_name, provider_
                 "Resource": "*",
             },
             {
+                # DeleteObject is required too -- not just for destroy, but
+                # because the S3-native state lock (use_lockfile = true)
+                # writes a .tflock object and deletes it when the lock is
+                # released after every plan/apply/destroy.
                 "Sid": "TerraformState",
                 "Effect": "Allow",
-                "Action": ["s3:GetObject", "s3:PutObject", "s3:ListBucket"],
+                "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:ListBucket"],
                 "Resource": [
                     f"arn:aws:s3:::{bucket_name}",
                     f"arn:aws:s3:::{bucket_name}/*",
