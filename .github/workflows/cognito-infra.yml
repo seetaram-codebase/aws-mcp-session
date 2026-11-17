@@ -69,11 +69,12 @@ jobs:
           CLIENT_SECRET=$(terraform output -raw cognito_client_secret)
           BASE_URL=$(terraform output -raw mcp_base_url)
 
-          # These are workshop/demo values handed to attendees on a slide --
-          # not production secrets -- so surfacing them in the summary is
-          # intentional, not a leak. Still masked from raw step logs.
-          echo "::add-mask::$CLIENT_SECRET"
-
+          # Deliberately NOT ::add-mask::-ing this. These are workshop/demo
+          # values handed to attendees on a slide, not production secrets --
+          # the whole point of this step is to make the value readable here.
+          # (Learned the hard way: add-mask redacts matching strings
+          # everywhere afterward, including this same job summary, which
+          # defeats the purpose -- it showed up as literal "***" below.)
           {
             echo "## Cognito (${{ inputs.mode }}) -- ready"
             echo ""
