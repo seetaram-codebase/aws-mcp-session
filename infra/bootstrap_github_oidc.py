@@ -261,7 +261,7 @@ def ensure_role(iam, account_id, region, repo, role_name, bucket_name, provider_
                 "Action": [
                     "secretsmanager:DescribeSecret", "secretsmanager:PutSecretValue",
                     "secretsmanager:DeleteSecret", "secretsmanager:GetSecretValue",
-                    "secretsmanager:TagResource",
+                    "secretsmanager:TagResource", "secretsmanager:GetResourcePolicy",
                 ],
                 # Secrets Manager appends a random suffix to the ARN at
                 # creation, hence the wildcard.
@@ -291,11 +291,21 @@ def ensure_role(iam, account_id, region, repo, role_name, bucket_name, provider_
                 "Sid": "LogsScoped",
                 "Effect": "Allow",
                 "Action": [
-                    "logs:CreateLogGroup", "logs:DeleteLogGroup", "logs:DescribeLogGroups",
+                    "logs:CreateLogGroup", "logs:DeleteLogGroup",
                     "logs:PutRetentionPolicy", "logs:TagResource", "logs:ListTagsForResource",
                     "logs:DescribeLogStreams",
                 ],
                 "Resource": f"arn:aws:logs:{region}:{account_id}:log-group:/ecs/mcp-finance-server*",
+            },
+            {
+                "Sid": "LogsDescribeUnscoped",
+                "Effect": "Allow",
+                # DescribeLogGroups is a list/filter call -- AWS evaluates it
+                # against a generic resource shape, not the specific group
+                # ARN, so scoping it the way the other logs actions are
+                # scoped above doesn't work (found by running apply).
+                "Action": "logs:DescribeLogGroups",
+                "Resource": "*",
             },
         ],
     }

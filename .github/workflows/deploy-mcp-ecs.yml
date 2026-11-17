@@ -4,6 +4,16 @@ name: Deploy MCP server to ECS
 # in infra/terraform (same state/pool as cognito-infra.yml -- this is one
 # module, ECS is just more resources in it) with the new image tag, which
 # rolls the ECS service to the new task definition revision.
+#
+# Two-phase apply, deliberately: the image has to be pushed to ECR before
+# the full apply can reference it in the task definition, but the ECR
+# *repository* has to exist before you can push to it. First apply targets
+# just the repo (idempotent -- a no-op if it's already there), then the
+# image gets built/pushed, then the full apply creates/updates everything
+# else. (Earlier version of this workflow had a separate imperative
+# `aws ecr create-repository` step instead of the targeted apply -- that
+# raced with Terraform's own aws_ecr_repository resource and failed with
+# RepositoryAlreadyExistsException on every run after the first.)
 
 on:
   workflow_dispatch:
@@ -21,6 +31,9 @@ permissions:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/terraform
     steps:
       - uses: actions/checkout@v4
 
@@ -29,11 +42,24 @@ jobs:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
 
-      - name: Ensure ECR repository exists
-        if: inputs.action == 'apply'
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~1.10"
+
+      - name: Terraform init
         run: |
-          aws ecr describe-repositories --repository-names mcp-finance-server --region "${{ vars.AWS_REGION }}" \
-            || aws ecr create-repository --repository-name mcp-finance-server --region "${{ vars.AWS_REGION }}"
+          terraform init \
+            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
+            -backend-config="key=cognito/workshop/terraform.tfstate" \
+            -backend-config="region=${{ vars.AWS_REGION }}"
+
+      - name: Terraform plan
+        if: inputs.action == 'plan'
+        run: terraform plan -var "aws_region=${{ vars.AWS_REGION }}"
+
+      - name: Ensure ECR repository exists (targeted apply)
+        if: inputs.action == 'apply'
+        run: terraform apply -auto-approve -target=aws_ecr_repository.mcp_server -var "aws_region=${{ vars.AWS_REGION }}"
 
       - uses: aws-actions/amazon-ecr-login@v2
         if: inputs.action == 'apply'
@@ -48,36 +74,16 @@ jobs:
           docker push "$IMAGE"
           echo "image_tag=${{ github.sha }}" >> "$GITHUB_ENV"
 
-      - uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: "~1.10"
-
-      - name: Terraform init
-        working-directory: infra/terraform
-        run: |
-          terraform init \
-            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
-            -backend-config="key=cognito/workshop/terraform.tfstate" \
-            -backend-config="region=${{ vars.AWS_REGION }}"
-
-      - name: Terraform plan
-        if: inputs.action == 'plan'
-        working-directory: infra/terraform
-        run: terraform plan -var "aws_region=${{ vars.AWS_REGION }}"
-
       - name: Terraform apply
         if: inputs.action == 'apply'
-        working-directory: infra/terraform
         run: terraform apply -auto-approve -var "aws_region=${{ vars.AWS_REGION }}" -var "image_tag=${{ env.image_tag }}"
 
       - name: Terraform destroy
         if: inputs.action == 'destroy'
-        working-directory: infra/terraform
         run: terraform destroy -auto-approve -var "aws_region=${{ vars.AWS_REGION }}"
 
       - name: Publish outputs to job summary
         if: inputs.action == 'apply'
-        working-directory: infra/terraform
         run: |
           {
             echo "## MCP server deployed"
