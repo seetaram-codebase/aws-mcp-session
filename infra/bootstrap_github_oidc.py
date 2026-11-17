@@ -201,12 +201,16 @@ def ensure_role(iam, account_id, region, repo, role_name, bucket_name, provider_
             {
                 "Sid": "EcsScoped",
                 "Effect": "Allow",
+                # Only mutations against an already-identified resource --
+                # the ones where resource-level scoping actually held up
+                # under a real apply. Every Describe/List/Create action
+                # for ECS turned out to need Resource "*" (see below),
+                # found the same way as everything else in this file: by
+                # running apply and reading the actual error, not by
+                # trusting the IAM resource-type docs in advance.
                 "Action": [
-                    "ecs:CreateCluster", "ecs:DeleteCluster", "ecs:DescribeClusters",
-                    "ecs:CreateService", "ecs:UpdateService", "ecs:DeleteService",
-                    "ecs:DescribeServices", "ecs:DescribeTaskDefinition", "ecs:DeregisterTaskDefinition",
-                    "ecs:ListTasks", "ecs:DescribeTasks", "ecs:TagResource", "ecs:UntagResource",
-                    "ecs:ListTagsForResource",
+                    "ecs:DeleteCluster", "ecs:UpdateService", "ecs:DeleteService",
+                    "ecs:TagResource", "ecs:UntagResource",
                 ],
                 "Resource": [
                     f"arn:aws:ecs:{region}:{account_id}:cluster/mcp-demo-cluster",
@@ -218,9 +222,10 @@ def ensure_role(iam, account_id, region, repo, role_name, bucket_name, provider_
             {
                 "Sid": "EcsUnscopedActions",
                 "Effect": "Allow",
-                # RegisterTaskDefinition/ListClusters/ListTaskDefinitions
-                # don't support resource-level permissions either.
                 "Action": [
+                    "ecs:CreateCluster", "ecs:CreateService", "ecs:DescribeClusters",
+                    "ecs:DescribeServices", "ecs:DescribeTaskDefinition", "ecs:DeregisterTaskDefinition",
+                    "ecs:ListTasks", "ecs:DescribeTasks", "ecs:ListTagsForResource",
                     "ecs:RegisterTaskDefinition", "ecs:ListClusters", "ecs:ListTaskDefinitions",
                     "ecs:ListServices",
                 ],
