@@ -5,14 +5,16 @@ your default browser to Cognito's Hosted UI, completes authorization-code +
 PKCE, and calls a tool with the resulting bearer token.
 
 Usage (server must already be running):
-    export MCP_BASE_URL=http://localhost:8000
     python test_client.py
 """
 
 import asyncio
 import os
 
+from dotenv import load_dotenv
 from fastmcp import Client
+
+load_dotenv()
 
 BASE_URL = os.environ.get("MCP_BASE_URL", "http://localhost:8000")
 

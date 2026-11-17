@@ -1,36 +1,40 @@
 """
 Personal Finance Guide -- an OAuth 2.1-protected FastMCP server.
 
-Demo server for the "Building an AWS-Native MCP Server" session. Exposes a
-few finance tools over Streamable HTTP, protected end-to-end by AWS Cognito
-acting as the OAuth 2.1 Authorization Server (SEP-990's enterprise-auth
-path). No API keys, no static secrets handed to the agent -- Claude
-Desktop / Cursor complete a real authorization-code + PKCE flow against
-Cognito's Hosted UI and present a short-lived bearer token on every call.
+Speaker's own stage-demo server for the "Building an AWS-Native MCP
+Server" session. Exposes a few finance tools over Streamable HTTP,
+protected end-to-end by AWS Cognito acting as the OAuth 2.1 Authorization
+Server (SEP-990's enterprise-auth path). No API keys, no static secrets
+handed to the agent -- Claude Desktop / Cursor complete a real
+authorization-code + PKCE flow against Cognito's Hosted UI and present a
+short-lived bearer token on every call.
+
+Shares the SAME Cognito User Pool as kickstart/server_template.py (what
+attendees run in the live hands-on segment) -- see infra/terraform/main.tf
+for why that's one pool now instead of two. The speaker gets a dedicated
+admin-created login in that pool (output as test_user_email/password by
+the Terraform/CI run); everyone else self-signs-up via Hosted UI.
 
 Run locally:
-    export COGNITO_USER_POOL_ID=...
-    export COGNITO_CLIENT_ID=...
-    export COGNITO_CLIENT_SECRET=...
-    export AWS_REGION=us-east-1
-    export MCP_BASE_URL=http://localhost:8000
+    cp .env.example .env   # fill in from the Terraform/CI output
     python finance_mcp_server.py
-
-All values above are printed by infra/setup_cognito.py after provisioning.
 """
 
 import os
 
+from dotenv import load_dotenv
 from fastmcp import FastMCP
 from fastmcp.server.auth.providers.aws import AWSCognitoProvider
+
+load_dotenv()
 
 auth = AWSCognitoProvider(
     user_pool_id=os.environ["COGNITO_USER_POOL_ID"],
     client_id=os.environ["COGNITO_CLIENT_ID"],
     client_secret=os.environ["COGNITO_CLIENT_SECRET"],
     aws_region=os.environ.get("AWS_REGION", "us-east-1"),
-    base_url=os.environ["MCP_BASE_URL"],
-    required_scopes=["openid", "finance/read"],
+    base_url=os.environ.get("MCP_BASE_URL", "http://localhost:8000"),
+    required_scopes=["openid", "mcp/access"],
 )
 
 mcp = FastMCP("Personal Finance Guide", auth=auth)

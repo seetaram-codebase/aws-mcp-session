@@ -20,10 +20,10 @@ output "hosted_ui_domain" {
 }
 
 output "test_user_email" {
-  value = var.workshop ? null : var.test_user_email
+  value = var.test_user_email
 }
 
 output "test_user_temporary_password" {
-  value     = var.workshop ? null : random_password.test_user[0].result
+  value     = random_password.test_user.result
   sensitive = true
 }

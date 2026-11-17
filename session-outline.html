@@ -451,7 +451,7 @@
       </div>
       <div class="note">
         <b>Status: real build, not just a slide</b>
-        <span>Two working OAuth-protected FastMCP servers now exist in this repo, both via FastMCP's built-in <code class="inline">AWSCognitoProvider</code> (a Cognito-specific OAuth proxy &mdash; Cognito has no native Dynamic Client Registration, so it fakes RFC 7591 on top of one pre-registered app client). <code class="inline">server/finance_mcp_server.py</code> is the speaker's own reference demo on a solo Cognito pool; <code class="inline">kickstart/server_template.py</code> is what attendees run themselves at 00:33, against one shared, self-signup Cognito pool (<code class="inline">infra/setup_cognito.py --workshop</code>). Both torn down after with <code class="inline">infra/teardown_cognito.py</code>.</span>
+        <span>Two working OAuth-protected FastMCP servers now exist in this repo, both pointed at the <i>same</i> Cognito User Pool (consolidated from an earlier two-pool design) via FastMCP's built-in <code class="inline">AWSCognitoProvider</code> (a Cognito-specific OAuth proxy &mdash; Cognito has no native Dynamic Client Registration, so it fakes RFC 7591 on top of one pre-registered app client). <code class="inline">server/finance_mcp_server.py</code> is the speaker's own reference demo, logging in with a dedicated admin-created test user; <code class="inline">kickstart/server_template.py</code> is what attendees run themselves at 00:33, self-signing-up their own Hosted UI login on that same pool. One pool, one teardown with <code class="inline">infra/teardown_cognito.py</code>.</span>
       </div>
     </section>
 

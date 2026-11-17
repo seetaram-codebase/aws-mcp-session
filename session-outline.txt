@@ -196,25 +196,28 @@ MFA enforcement, that kind of thing.
 
 STATUS: THIS IS NOW A REAL, WORKING BUILD -- NOT JUST A SLIDE
 Updated from the original plan. There are two real OAuth-protected FastMCP
-servers in this repo now, both using FastMCP's built-in AWSCognitoProvider
-(a Cognito-specific OAuth proxy -- Cognito has no native Dynamic Client
+servers in this repo now, BOTH pointed at the SAME Cognito User Pool
+(consolidated from an earlier two-pool design -- one pool, one app client,
+self-signup left open for everyone, plus a dedicated admin-created login
+for the speaker). Both use FastMCP's built-in AWSCognitoProvider (a
+Cognito-specific OAuth proxy -- Cognito has no native Dynamic Client
 Registration, so the provider fakes RFC 7591 on top of one pre-registered
 app client):
 
   server/finance_mcp_server.py   Speaker's own reference demo (the one
-                                  built live in the 00:11 segment). Solo
-                                  Cognito pool via infra/setup_cognito.py.
+                                  built live in the 00:11 segment). Logs
+                                  in with the dedicated test user that
+                                  infra/setup_cognito.py creates.
 
   kickstart/server_template.py   What attendees run themselves at 00:33.
-                                  Same auth wiring, generic placeholder
-                                  tool (`ping`). Points at ONE shared
-                                  Cognito pool (infra/setup_cognito.py
-                                  --workshop) with self-service sign-up
-                                  turned on, so each attendee creates their
-                                  own Hosted UI login with no AWS account
-                                  needed -- see kickstart/README.md.
+                                  Same auth wiring, same pool, generic
+                                  placeholder tool (`ping`). Each attendee
+                                  clicks "Sign up" on Hosted UI to create
+                                  their own login, no AWS account needed
+                                  -- see kickstart/README.md.
 
-  Both torn down cleanly afterward with infra/teardown_cognito.py.
+  Torn down cleanly afterward with infra/teardown_cognito.py (one pool,
+  one teardown).
 
 WHERE ADFS/IAM FIT
 ADFS speaks SAML, not OAuth, so in a real enterprise it sits one layer
