@@ -244,7 +244,8 @@ def ensure_role(iam, account_id, region, repo, role_name, bucket_name, provider_
                 # exist -- not worth it for a workshop role; same honesty
                 # note as the ELB/CloudFront statement above.
                 "Action": [
-                    "ec2:DescribeVpcs", "ec2:DescribeSubnets", "ec2:DescribeAvailabilityZones",
+                    "ec2:DescribeVpcs", "ec2:DescribeVpcAttribute", "ec2:DescribeSubnets",
+                    "ec2:DescribeAvailabilityZones",
                     "ec2:DescribeManagedPrefixLists", "ec2:GetManagedPrefixListEntries",
                     "ec2:DescribeSecurityGroups",
                     "ec2:DescribeSecurityGroupRules", "ec2:CreateSecurityGroup",
