@@ -136,11 +136,23 @@ def ensure_role(iam, account_id, region, repo, role_name, bucket_name, provider_
                 ],
             },
             {
-                "Sid": "CognitoCreate",
+                "Sid": "CognitoUnscopedActions",
                 "Effect": "Allow",
-                # CreateUserPool can't be scoped to a resource ARN -- the pool
-                # doesn't exist yet. Everything else above is resource-scoped.
-                "Action": ["cognito-idp:CreateUserPool", "cognito-idp:ListUserPools"],
+                # These don't support resource-level permissions in Cognito's
+                # IAM action reference -- AWS requires Resource "*" for them
+                # regardless of which pool they touch. CreateUserPool is the
+                # obvious one (pool doesn't exist yet); the domain actions
+                # less obviously fall in the same bucket -- found by actually
+                # running `apply` and hitting AccessDeniedException on
+                # DescribeUserPoolDomain, not from reading the docs first.
+                "Action": [
+                    "cognito-idp:CreateUserPool",
+                    "cognito-idp:ListUserPools",
+                    "cognito-idp:CreateUserPoolDomain",
+                    "cognito-idp:DescribeUserPoolDomain",
+                    "cognito-idp:UpdateUserPoolDomain",
+                    "cognito-idp:DeleteUserPoolDomain",
+                ],
                 "Resource": "*",
             },
             {
