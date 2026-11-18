@@ -137,10 +137,24 @@ mcp = FastMCP("MCP Builder", auth=auth)
 
 @mcp.tool
 def submit_server(attendee_name: str, tool_code: str) -> dict:
-    """Validate attendee tool code and stand up a brand new, dedicated MCP
-    server running it. Returns the new server's public HTTPS URL once it's
-    live. Takes a couple of minutes (CloudFront distribution propagation) --
-    this is not instant."""
+    """Validate tool code and stand up a brand new, dedicated MCP server
+    running it. Returns the new server's public HTTPS URL once it's live.
+    Takes a couple of minutes (CloudFront distribution propagation) -- this
+    is not instant.
+
+    tool_code must be the source of exactly one plain, top-level Python
+    function (not a class, not multiple functions) with a type-annotated
+    signature and a docstring -- the docstring becomes the tool's
+    description. Only these imports are allowed: random, math, datetime,
+    json, re. No file, network, subprocess, or dunder/builtin-introspection
+    access -- code using anything else is rejected before any deployment
+    happens. Example:
+
+    def roll_dice(sides: int = 6) -> dict:
+        \"\"\"Roll a die with the given number of sides.\"\"\"
+        import random
+        return {"result": random.randint(1, sides)}
+    """
 
     validate(tool_code)
 
