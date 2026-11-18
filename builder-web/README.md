@@ -12,7 +12,7 @@ cp .env.example .env   # defaults already point at the deployed Launcher
 python app.py
 ```
 
-Open `http://localhost:8080`. Sign in with the shared workshop Cognito
+Open `http://localhost:8000`. Sign in with the shared workshop Cognito
 login -- this app registers itself with the Launcher via Dynamic Client
 Registration on first use, so no Cognito configuration is needed here at
 all, same as Inspector, `submit.py`, or the Electron client.

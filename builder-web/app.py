@@ -40,7 +40,7 @@ from fastmcp.client.auth import BearerAuth
 load_dotenv()
 
 LAUNCHER_BASE_URL = os.environ["LAUNCHER_BASE_URL"].rstrip("/")
-PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "http://localhost:8080").rstrip("/")
+PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "http://localhost:8000").rstrip("/")
 AWS_REGION = os.environ.get("AWS_REGION", "us-east-1")
 BEDROCK_MODEL_ID = os.environ.get("BEDROCK_MODEL_ID", "us.anthropic.claude-haiku-4-5-20251001-v1:0")
 REDIRECT_URI = f"{PUBLIC_BASE_URL}/callback"
@@ -241,4 +241,4 @@ app.mount("/", StaticFiles(directory=os.path.join(os.path.dirname(__file__), "st
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))

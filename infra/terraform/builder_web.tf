@@ -45,7 +45,7 @@ resource "aws_cloudwatch_log_group" "builder_web" {
 
 resource "aws_lb_target_group" "builder_web" {
   name        = "mcp-builder-web"
-  port        = 8080
+  port        = 8000
   protocol    = "HTTP"
   vpc_id      = data.aws_vpc.default.id
   target_type = "ip"
@@ -126,12 +126,12 @@ resource "aws_ecs_task_definition" "builder_web" {
       name         = "mcp-builder-web"
       image        = "${aws_ecr_repository.builder_web.repository_url}:${var.builder_web_image_tag}"
       essential    = true
-      portMappings = [{ containerPort = 8080, protocol = "tcp" }]
+      portMappings = [{ containerPort = 8000, protocol = "tcp" }]
       environment = [
         { name = "LAUNCHER_BASE_URL", value = local.launcher_public_url },
         { name = "PUBLIC_BASE_URL", value = local.builder_web_public_url },
         { name = "AWS_REGION", value = var.aws_region },
-        { name = "PORT", value = "8080" },
+        { name = "PORT", value = "8000" },
       ]
       logConfiguration = {
         logDriver = "awslogs"
@@ -161,7 +161,7 @@ resource "aws_ecs_service" "builder_web" {
   load_balancer {
     target_group_arn = aws_lb_target_group.builder_web.arn
     container_name   = "mcp-builder-web"
-    container_port   = 8080
+    container_port   = 8000
   }
 
   depends_on = [aws_lb_listener_rule.builder_web]
