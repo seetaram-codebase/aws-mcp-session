@@ -219,7 +219,9 @@ def ensure_role(iam, account_id, region, repo, role_name, bucket_name, provider_
                 "Resource": [
                     f"arn:aws:ecs:{region}:{account_id}:cluster/mcp-demo-cluster",
                     f"arn:aws:ecs:{region}:{account_id}:service/mcp-demo-cluster/mcp-finance-server",
+                    f"arn:aws:ecs:{region}:{account_id}:service/mcp-demo-cluster/mcp-launcher",
                     f"arn:aws:ecs:{region}:{account_id}:task-definition/mcp-finance-server:*",
+                    f"arn:aws:ecs:{region}:{account_id}:task-definition/mcp-launcher:*",
                     f"arn:aws:ecs:{region}:{account_id}:task/mcp-demo-cluster/*",
                 ],
             },
