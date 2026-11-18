@@ -59,6 +59,15 @@ output "builder_web_ecr_repository_url" {
   value = aws_ecr_repository.builder_web.repository_url
 }
 
+output "finance_chat_web_public_url" {
+  description = "Finance Chat Web -- the browser chat UI for the finance server"
+  value       = local.finance_chat_web_public_url
+}
+
+output "finance_chat_web_ecr_repository_url" {
+  value = aws_ecr_repository.finance_chat_web.repository_url
+}
+
 output "porkbun_dns_record_for_custom_domain" {
   description = <<-EOT
     Optional upgrade: to use mcp.seetaram.dev instead of the CloudFront

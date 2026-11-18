@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Finance Chat</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --ink: #1a1d23;
+    --ink-muted: #6b7280;
+    --border: #e4e7ec;
+    --accent: #2f7d7d;
+    --accent-ink: #ffffff;
+    --bubble-user: #2f7d7d;
+    --bubble-user-ink: #ffffff;
+    --bubble-agent: #eef0f3;
+    --bubble-agent-ink: #1a1d23;
+    --err: #b42318;
+    --err-bg: #fef3f2;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    display: flex;
+    flex-direction: column;
+  }
+  .wrap { max-width: 720px; width: 100%; margin: 0 auto; padding: 20px 20px 0; display: flex; flex-direction: column; flex: 1; min-height: 0; }
+  header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-shrink: 0; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand .mark {
+    width: 34px; height: 34px; border-radius: 9px;
+    background: linear-gradient(135deg, var(--accent), #5fb3b3);
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-weight: 700; font-size: 16px;
+  }
+  .brand h1 { font-size: 17px; margin: 0; }
+  .brand p { margin: 0; font-size: 12px; color: var(--ink-muted); }
+  #authArea button, .mode-toggle button { font-size: 13px; }
+
+  button.primary, button.secondary {
+    border: none; border-radius: 9px; padding: 9px 16px; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: opacity 0.15s;
+  }
+  button.primary { background: var(--accent); color: var(--accent-ink); }
+  button.secondary { background: #eef0f3; color: var(--ink); }
+  button:disabled { opacity: 0.5; cursor: default; }
+  button.primary:hover:not(:disabled), button.secondary:hover:not(:disabled) { opacity: 0.88; }
+
+  .hero {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    text-align: center; padding: 48px 24px; margin-top: 10vh;
+  }
+  .hero h2 { font-size: 24px; margin: 0 0 10px; }
+  .hero p { color: var(--ink-muted); font-size: 15px; margin: 0 0 24px; line-height: 1.5; }
+
+  #chat { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  #messages {
+    flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;
+    padding: 4px 2px 16px;
+  }
+  .msg { max-width: 82%; padding: 11px 15px; border-radius: 16px; font-size: 14.5px; line-height: 1.5; white-space: pre-wrap; }
+  .msg.user { align-self: flex-end; background: var(--bubble-user); color: var(--bubble-user-ink); border-bottom-right-radius: 4px; }
+  .msg.agent { align-self: flex-start; background: var(--bubble-agent); color: var(--bubble-agent-ink); border-bottom-left-radius: 4px; }
+  .msg.err { align-self: flex-start; background: var(--err-bg); color: var(--err); border: 1px solid #f0b4ac; }
+  .msg.pending { align-self: flex-start; background: var(--bubble-agent); color: var(--ink-muted); }
+  .msg.pending::before {
+    content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 8px;
+    border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.7s linear infinite; vertical-align: -1px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .suggestions { display: flex; gap: 8px; flex-wrap: wrap; padding: 4px 2px 14px; flex-shrink: 0; }
+  .suggestions button {
+    background: var(--card); border: 1px solid var(--border); color: var(--ink-muted);
+    border-radius: 999px; padding: 7px 14px; font-size: 13px; cursor: pointer;
+  }
+  .suggestions button:hover { border-color: var(--accent); color: var(--accent); }
+
+  form#composer { display: flex; gap: 10px; padding: 14px 2px 20px; flex-shrink: 0; border-top: 1px solid var(--border); }
+  form#composer input {
+    flex: 1; padding: 11px 14px; border-radius: 9px; border: 1px solid var(--border);
+    font-size: 14px; font-family: inherit; background: var(--card); color: var(--ink);
+  }
+  form#composer input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  footer { text-align: center; font-size: 11.5px; color: var(--ink-muted); padding: 0 0 14px; flex-shrink: 0; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="mark">$</div>
+        <div>
+          <h1>Finance Chat</h1>
+          <p>Bedrock Claude + your Personal Finance Guide MCP server</p>
+        </div>
+      </div>
+      <div id="authArea"></div>
+    </header>
+
+    <div id="loggedOut" class="hero hidden">
+      <h2>Chat with your portfolio</h2>
+      <p>No IDE needed &mdash; sign in with your Cognito login and ask about<br/>your holdings, quotes, or allocation in plain English.</p>
+      <button class="primary" onclick="location.href='/login'">Sign in to get started</button>
+    </div>
+
+    <div id="chat" class="hidden">
+      <div id="messages"></div>
+      <div class="suggestions" id="suggestions">
+        <button onclick="sendSuggestion('What\'s in my portfolio?')">What's in my portfolio?</button>
+        <button onclick="sendSuggestion('Get a quote for AAPL')">Get a quote for AAPL</button>
+        <button onclick="sendSuggestion('How is my allocation split?')">How is my allocation split?</button>
+      </div>
+      <form id="composer" onsubmit="return onSubmit(event)">
+        <input type="text" id="input" placeholder="Ask about your portfolio..." autocomplete="off" />
+        <button class="primary" type="submit" id="sendBtn">Send</button>
+      </form>
+    </div>
+
+    <footer>Powered by <code>server/finance_mcp_server.py</code> over OAuth 2.1 &middot; same validation path as every other MCP client in this demo</footer>
+  </div>
+
+<script>
+async function checkSession() {
+  const res = await fetch("/api/session");
+  const { logged_in } = await res.json();
+  document.getElementById("loggedOut").classList.toggle("hidden", logged_in);
+  document.getElementById("chat").classList.toggle("hidden", !logged_in);
+  document.getElementById("authArea").innerHTML = logged_in
+    ? '<button class="secondary" onclick="resetChat()">Reset</button> <button class="secondary" onclick="logout()">Sign out</button>'
+    : "";
+  if (logged_in) document.getElementById("input").focus();
+}
+
+async function logout() {
+  await fetch("/logout", { method: "POST" });
+  document.getElementById("messages").innerHTML = "";
+  checkSession();
+}
+
+async function resetChat() {
+  await fetch("/api/reset", { method: "POST" });
+  document.getElementById("messages").innerHTML = "";
+}
+
+function addMessage(text, cls) {
+  const messages = document.getElementById("messages");
+  const el = document.createElement("div");
+  el.className = "msg " + cls;
+  el.textContent = text;
+  messages.appendChild(el);
+  messages.scrollTop = messages.scrollHeight;
+  return el;
+}
+
+function sendSuggestion(text) {
+  document.getElementById("input").value = text;
+  onSubmit(new Event("submit"));
+}
+
+async function onSubmit(e) {
+  e.preventDefault();
+  const input = document.getElementById("input");
+  const text = input.value.trim();
+  if (!text) return false;
+  input.value = "";
+
+  addMessage(text, "user");
+  const pending = addMessage("Thinking...", "pending");
+  document.getElementById("sendBtn").disabled = true;
+
+  try {
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: text }),
+    });
+    const data = await res.json();
+    pending.remove();
+    if (data.error) {
+      addMessage(data.error, "err");
+    } else {
+      addMessage(data.reply || "(no response)", "agent");
+    }
+  } catch (err) {
+    pending.remove();
+    addMessage(err.message, "err");
+  } finally {
+    document.getElementById("sendBtn").disabled = false;
+    input.focus();
+  }
+  return false;
+}
+
+checkSession();
+</script>
+</body>
+</html>

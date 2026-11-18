@@ -33,6 +33,12 @@ variable "builder_web_image_tag" {
   default     = "latest"
 }
 
+variable "finance_chat_web_image_tag" {
+  type        = string
+  description = "Tag of the mcp-finance-chat-web image in ECR to deploy"
+  default     = "latest"
+}
+
 variable "max_attendee_servers" {
   type        = number
   description = "Cap on concurrently active attendee servers the Launcher will provision -- a guardrail against one runaway submit loop spinning up unlimited infrastructure"
