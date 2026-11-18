@@ -5,7 +5,7 @@ spec itself is headed next.
 
 Format: 45-60 min talk + live demo
 Stack: Python . FastMCP . ECS Fargate . ALB . IAM
-Status: outline v2, corrected
+Status: outline v3, synced to deck
 
 
 ====================================================
@@ -78,8 +78,8 @@ MCP effort, and how a 2026 debate about what belongs in the protocol
 
 - Enterprise Control. Connecting a cloud-hosted MCP server to local IDEs
   (Cursor, Claude Desktop) over a real, working OAuth 2.1 flow (Cognito as
-  the Authorization Server) -- and then doing it themselves, live, against
-  a shared Cognito pool, before touching the ADFS/Okta/IAM Identity Center
+  the Authorization Server) -- then watching it happen live via a
+  no-terminal web app, before touching the ADFS/Okta/IAM Identity Center
   enterprise-IdP story as a one-line provider swap.
 
 - Where the spec is headed. Skills over MCP -- SEP-2076's open question,
@@ -96,57 +96,103 @@ infrastructure with a live walkthrough, not a from-zero build.
 00:00  (5 min)  Hook + the credential problem
                 Why "just give the agent an access key" breaks down fast.
 
+PART 1: MCP CONCEPTS -- transport-agnostic, host-agnostic, nothing
+AWS-specific until Part 2.
+
 00:05  (6 min)  MCP blueprint
-                Tools vs. resources vs. prompts; client-server handshake.
+                Tools vs. resources vs. prompts (plus Skills, forward-
+                referenced for the close); client-server handshake.
 
-00:11  (9 min)  Build: FastMCP server, live
+00:11  (2 min)  You don't have to build every server
+                The marketplace: `uv run script.py` (your own, PEP 723
+                deps), `uvx mcp-server-fetch` (published, the npx of this
+                ecosystem), `uvx awslabs.aws-documentation-mcp-server`
+                (AWS Labs' own). Build your own only when the tool/API
+                nobody's published yet is the point -- that's everything
+                else in this talk.
+
+00:13  (2 min)  Two shapes of MCP server
+                stdio: client launches it as a subprocess, your laptop
+                only, no auth needed. Streamable HTTP: a real network
+                service, needs real auth -- Part 2 builds this one.
+
+00:15  (3 min)  How a server advertises what it has
+                @mcp.tool/.resource/.prompt register into an in-memory
+                registry; client sends tools/list etc. over the live
+                connection; server answers from whatever's registered
+                right now. Plant: that registry is wiped on restart --
+                pays off in the Part 2 war story.
+
+00:18  (3 min)  The protocol, method by method
+                Plain JSON-RPC 2.0. initialize -> notifications/initialized
+                opens the session; tools/list + tools/call discover and
+                invoke; resources/prompts follow the same list-then-fetch
+                shape; notifications/tools/list_changed pushes registry
+                changes instead of making the client guess.
+
+PART 2: AWS DEMO -- taking the server half of that handshake and running
+it safely, at a real URL, in AWS.
+
+00:21  (9 min)  Build: FastMCP server, live
                 Personal-finance-guide MCP tool (get_portfolio, get_quote,
-                analyze_allocation) on stage, run it locally over stdio.
+                analyze_allocation) on stage, run it locally over stdio
+                first.
 
-00:20  (8 min)  Ship it: ECS Fargate + ALB
+00:30  (7 min)  Ship it: ECS Fargate + ALB
                 Same server, Streamable HTTP, pre-deployed -- walk the
                 console/CDK, hit it from a terminal.
 
-00:28  (5 min)  Zero-trust: IAM task role
-                Show the least-privilege policy; call a tool that would
-                fail without it.
+OPTIONAL (time-permitting): War story: the OAuth client that vanished
+                MCP Inspector cached a dynamic client registration
+                locally; a server redeploy wiped the in-memory registry
+                from 00:15; the cached ID kept failing until deleted.
+                Lesson: durable storage for client registrations, not
+                just process memory. Cut first if running long -- it's a
+                bonus, not load-bearing.
 
-00:33  (18 min) LIVE: everyone builds an OAuth-protected MCP server
-                Real build, not a slide. Attendees clone kickstart/, run
-                server_template.py against a shared pre-provisioned
-                Cognito User Pool, self-sign-up their own Hosted UI login,
-                connect Claude Desktop/Cursor over OAuth 2.1 (SEP-990),
-                then add one tool of their own. Speaker's own
-                finance_mcp_server.py is the worked reference if anyone
-                gets stuck. One-line callout: swapping AWSCognitoProvider
-                for Okta/Auth0/WorkOS is how an enterprise IdP plugs in --
-                no server-code changes, which is the ADFS/IAM Identity
-                Center bullet made concrete.
+00:37  (18 min) LIVE: everyone builds -- no terminal required
+                Real build, not a slide, but the IDE/OAuth-self-signup
+                flow has moved to a stretch option (below). Attendees
+                open MCP Builder Web in their browser, sign in with the
+                shared workshop login, describe a tool in plain English
+                ("Draft with AI" turns it into reviewable code), click
+                Deploy -- their own ECS task + CloudFront URL, live in
+                under a minute. That's MCP Builder (launcher/) underneath,
+                same submit_server/boto3 engine every path in this talk
+                uses; the web app is just the no-code front door.
 
-                STRETCH GOAL (not required, no extra setup): anyone done
-                early can go one step further with `python submit.py
-                "name"` -- sends their tool to the Launcher (launcher/),
-                which stands up their OWN dedicated ECS task + CloudFront
-                domain running it, live, in ~1-2 min. No new AWS account,
-                no GitHub, same Cognito login they already have. Project
-                the resulting URLs in MCP Inspector on the shared screen
-                as they come in -- this is the "look, it's really running
-                in the speaker's AWS account" payoff shot. Don't budget
-                room time for this: it's a take-home / early-finisher
-                option, not a step everyone needs to complete.
+                STRETCH GOAL (not required, no extra setup) -- want to see
+                the code underneath? Three ways in: call submit_server
+                directly from MCP Inspector; clone kickstart/, write a
+                real FastMCP tool against the shared Cognito pool (self-
+                sign-up Hosted UI login, connect Claude Desktop/Cursor
+                over OAuth 2.1/SEP-990, same markers the web app's AI
+                draft also produces), and run submit.py; or describe it in
+                chat to the Electron desktop agent (Bedrock-drafted,
+                human approval before anything deploys). One-line callout
+                either way: swapping AWSCognitoProvider for Okta/Auth0/
+                WorkOS is how an enterprise IdP plugs in -- no server-code
+                changes, the ADFS/IAM Identity Center bullet made
+                concrete. Project the resulting URLs in MCP Inspector on
+                the shared screen as they land -- the "look, it's really
+                running in the speaker's AWS account" payoff shot. Don't
+                budget room time for this: it's a take-home / early-
+                finisher option, not a step everyone needs to complete.
 
-00:51  (4 min)  Closing: Skills over MCP
+00:55  (4 min)  Closing: Skills over MCP
                 SEP-2076 -> SEP-2640, and what it means for where MCP goes
                 next.
 
-00:55  (5+ min) Q&A
+00:59  (1+ min) Q&A
 
 TIMING NOTE
 This now runs to the 60-min ceiling of the stated 45-60 min slot, almost
-entirely on the back of the hands-on segment. If the room runs short,
-cut the hands-on to "add one tool" only (skip step 4/self-test-first,
-go straight to IDE) and point to kickstart/README.md as a take-home for
-the rest.
+entirely on Part 1's protocol walkthrough and Part 2's hands-on segment.
+If the room runs short, cut the optional war-story slide first, then
+collapse Part 1's "marketplace" / "two shapes" / "discovery" / "protocol
+methods" beats down to just the blueprint and the stdio/HTTP split. The
+hands-on segment itself needs no cuts -- it's browser-based, not a
+terminal walkthrough.
 
 
 ====================================================
@@ -186,16 +232,15 @@ with the task role attached -> register target group behind the ALB. All
 scriptable with the CLI or CDK ahead of the talk; the "build" segment on
 stage only adds one new tool to an already-running server.
 
-STRETCH-GOAL PATH: THE LAUNCHER
-For attendees who want to see their OWN tool actually running in AWS
-(not just locally), launcher/ is a second always-on FastMCP server --
-same Cognito pool, so no new login -- whose one tool, submit_server,
-does the CONTAINER PATH above programmatically via boto3 the moment an
-attendee submits code (python submit.py, or by asking the Electron demo
-agent in chat to "build and deploy" a tool -- that path adds a human
-approval click before anything deploys, since the code is LLM-authored).
-Each submission gets its own ECS task + its own free CloudFront domain
-(needed because Cognito's OAuth callback list is exact-match, no
+MAIN HANDS-ON PATH: THE LAUNCHER, VIA BUILDER WEB
+launcher/ ("MCP Builder") is a second always-on FastMCP server -- same
+Cognito pool via Dynamic Client Registration -- whose one tool,
+submit_server, does the CONTAINER PATH above programmatically via boto3
+the moment an attendee submits code. At 00:37 that's fronted by
+builder-web/, a browser app: describe a tool in plain English, "Draft
+with AI" turns it into reviewable code, click Deploy. No terminal, no
+IDE. Each submission gets its own ECS task + its own free CloudFront
+domain (needed because Cognito's OAuth callback list is exact-match, no
 wildcards -- one shared domain can't serve multiple logins). Submitted
 code is AST-validated against an import allowlist (random/math/
 datetime/json/re only, no file/network/subprocess) before anything
@@ -203,6 +248,16 @@ touches AWS. This is the "zero-trust guardrails" bullet made concrete a
 second time, from the opposite direction: least-privilege on the
 INFRASTRUCTURE side (section 05's IAM task role) plus validation on the
 CODE side (what actually gets allowed to run on that infrastructure).
+
+STRETCH GOAL: SAME submit_server, THREE MORE WAYS IN
+For attendees who want to see the code underneath the web app: call
+submit_server directly from MCP Inspector (most direct); clone
+kickstart/, write a real FastMCP tool, run `python submit.py "name"`
+(the hand-written path, same markers the web app's AI draft also
+produces); or describe it in chat to the Electron demo agent, which
+drafts and deploys with a human approval click before anything ships
+(no IDE at all). Project the resulting URLs in MCP Inspector on the
+shared screen as they land.
 
 
 ====================================================
@@ -235,16 +290,18 @@ Registration, so the provider fakes RFC 7591 on top of one pre-registered
 app client):
 
   server/finance_mcp_server.py   Speaker's own reference demo (the one
-                                  built live in the 00:11 segment). Logs
+                                  built live in the 00:21 segment). Logs
                                   in with the dedicated test user that
                                   infra/setup_cognito.py creates.
 
-  kickstart/server_template.py   What attendees run themselves at 00:33.
-                                  Same auth wiring, same pool, generic
-                                  placeholder tool (`ping`). Each attendee
-                                  clicks "Sign up" on Hosted UI to create
-                                  their own login, no AWS account needed
-                                  -- see kickstart/README.md.
+  kickstart/server_template.py   Now the hand-written stretch-goal path
+                                  at 00:37 (MCP Builder Web is the main
+                                  flow). Same auth wiring, same pool,
+                                  generic placeholder tool (`ping`). Each
+                                  attendee clicks "Sign up" on Hosted UI
+                                  to create their own login, no AWS
+                                  account needed -- see
+                                  kickstart/README.md.
 
   Torn down cleanly afterward with infra/teardown_cognito.py (one pool,
   one teardown).

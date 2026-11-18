@@ -86,7 +86,7 @@
   h2 { font-size: clamp(28px, 4vw, 44px); line-height: 1.12; margin: 0 0 22px; text-wrap: balance; font-weight: 700; }
   .lede { font-size: clamp(16px, 1.6vw, 21px); color: var(--ink-muted); max-width: 62ch; line-height: 1.5; margin: 0 0 8px; }
 
-  .body { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 24px; min-height: 0; }
+  .body { flex: 1; display: flex; flex-direction: column; justify-content: flex-start; gap: 28px; min-height: 0; padding-top: 2vh; }
 
   ul.points { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 16px; max-width: 70ch; }
   ul.points li {
@@ -117,16 +117,28 @@
   pre .str { color: #9fd2a0; }
   pre .com { color: #6b7684; font-style: italic; }
 
-  .arch { display: flex; flex-direction: column; gap: 0; max-width: 560px; }
+  .arch { display: flex; flex-direction: column; gap: 0; max-width: 880px; }
   .arch-step {
     background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
-    padding: 14px 18px; font-size: clamp(14px, 1.5vw, 17px); display: flex; align-items: center; gap: 12px;
+    padding: 18px 26px; font-size: clamp(16px, 1.8vw, 20px); display: flex; align-items: center; gap: 14px;
   }
   .arch-step .tag {
     font-family: "SF Mono", "Cascadia Code", Consolas, monospace; font-size: 11px; color: var(--accent);
     border: 1px solid var(--accent); border-radius: 5px; padding: 2px 6px; flex-shrink: 0;
   }
+  .arch-step .step-text { flex: 1; min-width: 0; }
   .arch-arrow { text-align: center; color: var(--ink-muted); font-size: 18px; margin: 2px 0; }
+
+  .icon-list { display: flex; flex-direction: column; gap: 22px; max-width: 640px; }
+  .icon-row { display: flex; align-items: center; gap: 22px; }
+  .icon-badge {
+    width: 44px; height: 44px; flex-shrink: 0; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--surface); border: 1px solid var(--border);
+  }
+  .icon-row .irow-text { display: flex; flex-direction: column; gap: 2px; }
+  .icon-row .irow-cmd { font-family: "SF Mono", "Cascadia Code", Consolas, monospace; font-weight: 700; font-size: clamp(16px, 1.9vw, 21px); color: var(--accent); }
+  .icon-row .irow-desc { font-size: clamp(14px, 1.4vw, 16px); color: var(--ink-muted); }
 
   .trio { display: flex; gap: 18px; flex-wrap: wrap; }
   .trio .pathcard {
@@ -174,6 +186,11 @@
   .title-slide .meta { margin-top: 32px; display: flex; gap: 28px; color: var(--ink-muted); font-size: 15px; }
   .title-slide .meta .mono { color: var(--ink); }
 
+  .part-slide { justify-content: center; }
+  .part-slide .partno { font-family: "SF Mono", "Cascadia Code", Consolas, monospace; color: var(--accent2); letter-spacing: 0.15em; text-transform: uppercase; font-size: 15px; margin-bottom: 18px; }
+  .part-slide h1 { max-width: 20ch; }
+  .part-slide .lede { max-width: 56ch; }
+
   .thanks { justify-content: center; align-items: flex-start; }
   .links { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
   .links a { color: var(--accent2); text-decoration: none; font-size: 15px; }
@@ -207,24 +224,135 @@
     <div class="notes">Hook: ask the room "who's pasted an API key into a Claude Desktop config?" Get a laugh/nod, then pivot &mdash; that's the exact problem this talk solves.</div>
   </section>
 
-  <section class="slide">
-    <div class="eyebrow">01 <span class="time">00:05 &middot; 6 min</span></div>
-    <h2>The MCP blueprint</h2>
-    <div class="body">
-      <div class="arch">
-        <div class="arch-step"><span class="tag">TOOLS</span> Actions the agent can invoke &mdash; <span class="mono">get_quote()</span>, not just read data</div>
-        <div class="arch-arrow">+</div>
-        <div class="arch-step"><span class="tag">RESOURCES</span> Context the agent can read &mdash; files, API responses, state</div>
-        <div class="arch-arrow">+</div>
-        <div class="arch-step"><span class="tag">PROMPTS</span> Reusable instruction templates the host can surface</div>
-      </div>
-      <p class="lede">One client&ndash;server handshake, three primitives. Everything else in this talk is "how do we run the server half of that handshake safely, in AWS."</p>
-    </div>
-    <div class="notes">Keep this tight &mdash; 6 min budget. The audience mostly already knows MCP exists; the news is the AWS productionization story, not the protocol basics.</div>
+  <section class="slide part-slide">
+    <div class="partno">Part 1 of 2</div>
+    <h1>MCP Concepts</h1>
+    <p class="lede">The protocol itself &mdash; transport-agnostic, host-agnostic, true on your laptop and in production alike. None of this needs AWS yet.</p>
+    <div class="notes">Quick verbal marker: "everything in this part works the same whether you're on a laptop or in the cloud &mdash; we're not touching AWS until Part 2."</div>
   </section>
 
   <section class="slide">
-    <div class="eyebrow">02 <span class="time">00:11 &middot; 9 min &middot; LIVE BUILD</span></div>
+    <div class="eyebrow">C1 <span class="time">00:05 &middot; 6 min</span></div>
+    <h2>The MCP blueprint</h2>
+    <div class="body">
+      <div class="arch">
+        <div class="arch-step"><span class="tag">TOOLS</span> <span class="step-text">Actions the agent can invoke &mdash; <span class="mono">get_quote()</span>, not just read data</span></div>
+        <div class="arch-arrow">+</div>
+        <div class="arch-step"><span class="tag">RESOURCES</span> <span class="step-text">Context the agent can read &mdash; files, API responses, state</span></div>
+        <div class="arch-arrow">+</div>
+        <div class="arch-step"><span class="tag">PROMPTS</span> <span class="step-text">Reusable instruction templates the host can surface</span></div>
+      </div>
+      <p class="lede">One client&ndash;server handshake, three primitives. Part 2 is entirely "how do we run the server half of that handshake safely, in AWS" &mdash; nothing here is AWS-specific.</p>
+      <p class="lede" style="margin-top:-4px">A fourth, <b>Skills</b>, has since joined the spec &mdash; more on that at the close.</p>
+    </div>
+    <div class="notes">Keep this tight &mdash; 6 min budget. The audience mostly already knows MCP exists; the news is the AWS productionization story, not the protocol basics. Skills forward-reference pays off at the closing slide.</div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">C2 <span class="time">00:11 &middot; 2 min</span></div>
+    <h2>You don't have to build every server</h2>
+    <div class="body">
+      <p class="lede" style="margin-bottom:0">Before we build one: the <span class="mono">command</span> in <span class="mono">.mcp.json</span> just tells the client how to launch it, and a whole marketplace already exists.</p>
+      <div class="icon-list">
+        <div class="icon-row">
+          <div class="icon-badge" style="color:var(--accent2)">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 9l3 3-3 3"/><path d="M12 15h6"/></svg>
+          </div>
+          <div class="irow-text">
+            <span class="irow-cmd">uv run script.py</span>
+            <span class="irow-desc">Your own local script &mdash; inline PEP&nbsp;723 metadata declares its deps, <span class="mono">uv</span> installs them into an ephemeral env on first run</span>
+          </div>
+        </div>
+        <div class="icon-row">
+          <div class="icon-badge" style="color:var(--accent)">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
+          </div>
+          <div class="irow-text">
+            <span class="irow-cmd">uvx mcp-server-fetch</span>
+            <span class="irow-desc">Official, published MCP servers, run by package name &mdash; the <span class="mono">npx</span> of this ecosystem. Fetch, git, SQLite, and more already exist</span>
+          </div>
+        </div>
+        <div class="icon-row">
+          <div class="icon-badge" style="color:var(--accent2)">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15c4.5 3 13.5 3 18 0"/><path d="M16 12.5l5 2.2-4 2"/></svg>
+          </div>
+          <div class="irow-text">
+            <span class="irow-cmd">uvx awslabs.aws-documentation-mcp-server</span>
+            <span class="irow-desc">AWS Labs ships official MCP servers too &mdash; live AWS docs, CDK guidance, cost analysis, zero infrastructure of your own</span>
+          </div>
+        </div>
+      </div>
+      <p class="lede">So when's it worth building your own? When you need a tool over data or an API nobody's published yet &mdash; your own database, your own internal service. That's everything else in this talk.</p>
+      <p class="lede" style="margin-top:-4px"><span class="mono">npx @modelcontextprotocol/inspector --config .mcp.json</span> &mdash; no <span class="mono">--server</span> flag, and Inspector loads every entry in the file into one UI with a dropdown to switch between them.</p>
+    </div>
+    <div class="notes">Demo if time: add mcp-server-fetch to .mcp.json live, ask the agent to fetch a page. This is the "why build your own, and when you shouldn't" beat &mdash; keep it quick, it's motivation, not the main event. Also a good moment to open Inspector against this project's own .mcp.json (5 servers: finance-demo, mcp-builder, seetaram-2, local-file-demo, fetch) and flip through the dropdown live.</div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">C3 <span class="time">00:13 &middot; 2 min</span></div>
+    <h2>Two shapes of MCP server</h2>
+    <div class="body">
+      <div class="trio">
+        <div class="pathcard">
+          <div class="ptitle">stdio</div>
+          <div class="pdesc">The client launches your script as a subprocess and talks over stdin/stdout. No network, no auth handshake &mdash; trust comes from "you're the one who launched it."</div>
+          <span class="pwho">your laptop only</span>
+        </div>
+        <div class="pathcard">
+          <div class="ptitle">Streamable HTTP</div>
+          <div class="pdesc">A real network service, reachable by any client that has the URL. Needs real auth &mdash; this is what Part 2 builds.</div>
+          <span class="pwho">anyone, anywhere</span>
+        </div>
+      </div>
+      <p class="lede">Part 2 builds the second kind. But stdio is the right call whenever a tool needs your local filesystem, your git repo, or secrets that should never be reachable from the internet in the first place.</p>
+    </div>
+    <div class="notes">Quick framing beat, don't over-dwell. Good concrete stdio example if asked: a tool scoped to read/write files in one sandboxed local folder &mdash; zero network exposure by construction, not by policy.</div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">C4 <span class="time">00:15 &middot; 3 min</span></div>
+    <h2>How a server advertises what it has</h2>
+    <div class="body">
+      <div class="arch" style="max-width:600px">
+        <div class="arch-step"><span class="tag">1</span> <span class="step-text"><span class="mono">@mcp.tool</span> / <span class="mono">@mcp.resource</span> / <span class="mono">@mcp.prompt</span> register into an in&#8209;memory registry, at startup or any time after</span></div>
+        <div class="arch-arrow">&darr;</div>
+        <div class="arch-step"><span class="tag">2</span> <span class="step-text">Client sends <span class="mono">tools/list</span>, <span class="mono">resources/list</span>, <span class="mono">prompts/list</span> over that same connection</span></div>
+        <div class="arch-arrow">&darr;</div>
+        <div class="arch-step"><span class="tag">3</span> <span class="step-text">Server answers from whatever's registered right now &mdash; there's no separate discovery service</span></div>
+      </div>
+      <p class="lede">No magic: a typed signature becomes the JSON Schema, the docstring becomes the description. Worth remembering for Part 2 &mdash; that registry lives in process memory, which means it's also exactly what a restart wipes clean.</p>
+    </div>
+    <div class="notes">Deliberate setup for the Part 2 war story slide &mdash; plant the "in-memory, wiped on restart" detail here so it pays off later instead of landing as a surprise non-sequitur.</div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">C4.5 <span class="time">00:18 &middot; 3 min</span></div>
+    <h2>The protocol, method by method</h2>
+    <div class="body">
+      <ul class="points">
+        <li><b><span class="mono">initialize</span> &rarr; <span class="mono">notifications/initialized</span></b> <span class="muted">opens the session &mdash; protocol version and capabilities get negotiated, then the client confirms it's ready</span></li>
+        <li><b><span class="mono">tools/list</span> / <span class="mono">tools/call</span></b> <span class="muted">discover what's registered, then invoke one by name with arguments</span></li>
+        <li><b>resources &amp; prompts follow the same shape</b> <span class="muted"><span class="mono">resources/list</span>+<span class="mono">read</span>, <span class="mono">prompts/list</span>+<span class="mono">get</span> &mdash; same list-then-fetch pattern, different payload</span></li>
+        <li><b><span class="mono">notifications/tools/list_changed</span></b> <span class="muted">server-initiated push when its registry changes &mdash; the client re-lists instead of guessing</span></li>
+      </ul>
+      <pre><span class="com">// what tools/call actually looks like on the wire</span>
+{<span class="str">"method"</span>: <span class="str">"tools/call"</span>, <span class="str">"params"</span>: {<span class="str">"name"</span>: <span class="str">"get_quote"</span>, <span class="str">"arguments"</span>: {<span class="str">"ticker"</span>: <span class="str">"AMZN"</span>}}}
+<span class="com">// server replies with content blocks, not a bare return value</span>
+{<span class="str">"result"</span>: {<span class="str">"content"</span>: [{<span class="str">"type"</span>: <span class="str">"text"</span>, <span class="str">"text"</span>: <span class="str">"AMZN: $231.40"</span>}], <span class="str">"isError"</span>: <span class="kw">false</span>}}</pre>
+      <p class="lede">Plain JSON&#8209;RPC 2.0, over whichever transport C3 covered &mdash; four method families whether you're asking for tools, resources, or prompts.</p>
+    </div>
+    <div class="notes">Source: modelcontextprotocol.io/specification/2025-06-18. If asked about resources/subscribe or completions, those are optional capabilities beyond this baseline &mdash; mention briefly, don't dive in.</div>
+  </section>
+
+  <section class="slide part-slide">
+    <div class="partno">Part 2 of 2</div>
+    <h1>AWS Demo</h1>
+    <p class="lede">Everything from here on is about the deployment: taking the server half of that handshake and running it safely, at a real URL, in AWS.</p>
+    <div class="notes">Pivot moment &mdash; this is where the laptop closes and the terminal/console takes over for the rest of the talk.</div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">D1 <span class="time">00:21 &middot; 9 min &middot; LIVE BUILD</span></div>
     <h2>A FastMCP server, on stage</h2>
     <div class="body">
       <pre><span class="kw">from</span> fastmcp <span class="kw">import</span> FastMCP
@@ -239,21 +367,21 @@ mcp = FastMCP(<span class="str">"Personal Finance Guide"</span>)
     <span class="kw">return</span> _PORTFOLIO
 
 mcp.run()  <span class="com"># stdio, for now</span></pre>
-      <p class="lede">Run it locally over stdio. No AWS yet &mdash; this is the "brittle local prototype" from the abstract, built in real time.</p>
+      <p class="lede">Run it locally over stdio first. No AWS yet &mdash; this is the "brittle local prototype" from the abstract, built in real time.</p>
     </div>
     <div class="notes">Actually type this live if time allows, don't paste. get_portfolio / get_quote / analyze_allocation are the three tools in server/finance_mcp_server.py &mdash; that file is the safety net if live-coding goes sideways.</div>
   </section>
 
   <section class="slide">
-    <div class="eyebrow">03 <span class="time">00:20 &middot; 8 min</span></div>
+    <div class="eyebrow">D2 <span class="time">00:30 &middot; 7 min</span></div>
     <h2>Ship it: ECS Fargate + ALB</h2>
     <div class="body">
       <div class="arch">
-        <div class="arch-step"><span class="tag">CLIENT</span> Claude Desktop / Cursor &mdash; remote MCP config</div>
+        <div class="arch-step"><span class="tag">CLIENT</span> <span class="step-text">Claude Desktop / Cursor &mdash; remote MCP config</span></div>
         <div class="arch-arrow">&darr;</div>
-        <div class="arch-step"><span class="tag">ALB</span> TLS termination, routes to the ECS service</div>
+        <div class="arch-step"><span class="tag">ALB</span> <span class="step-text">TLS termination, routes to the ECS service</span></div>
         <div class="arch-arrow">&darr;</div>
-        <div class="arch-step"><span class="tag">ECS</span> Fargate task &mdash; same server, Streamable HTTP, stateless</div>
+        <div class="arch-step"><span class="tag">ECS</span> <span class="step-text">Fargate task &mdash; same server, Streamable HTTP, stateless</span></div>
       </div>
       <p class="lede">Streamable HTTP (post SEP&#8209;2575/2567) is what makes this horizontally scalable &mdash; an SSE-session server couldn't sit behind a plain load balancer like this.</p>
     </div>
@@ -261,42 +389,43 @@ mcp.run()  <span class="com"># stdio, for now</span></pre>
   </section>
 
   <section class="slide">
-    <div class="eyebrow">04 <span class="time">00:28 &middot; 5 min</span></div>
-    <h2>Zero-trust: the IAM task role</h2>
+    <div class="eyebrow">D3 <span class="time">optional &middot; time&#8209;permitting</span></div>
+    <h2>War story: the OAuth client that vanished</h2>
     <div class="body">
-      <pre><span class="com">// mcp-server-ecs-task -- no policies attached.</span>
-<span class="com">// This demo's tools are all in-memory mock data,</span>
-<span class="com">// so the task role grants nothing. On purpose.</span>
-{
-  <span class="str">"Version"</span>: <span class="str">"2012-10-17"</span>,
-  <span class="str">"Statement"</span>: []
-}</pre>
-      <ul class="points">
-        <li><b>Least privilege taken to its logical conclusion.</b> <span class="muted">Call a tool that needs a real AWS read, watch it fail without the role &mdash; then show the one-line fix.</span></li>
-      </ul>
-    </div>
-    <div class="notes">Live: try calling a tool that would need ec2:Describe* without the permission, show the AccessDenied, then add the policy and re-run. Visceral, not theoretical.</div>
-  </section>
-
-  <section class="slide">
-    <div class="eyebrow">05 <span class="time">00:33 &middot; 18 min &middot; LIVE: EVERYONE BUILDS</span></div>
-    <h2>Your turn &mdash; OAuth-protected, for real</h2>
-    <div class="body">
-      <div class="arch" style="max-width:620px">
-        <div class="arch-step"><span class="tag">1</span> Clone <span class="mono">kickstart/</span>, run <span class="mono">server_template.py</span></div>
+      <pre><span class="com">// MCP Inspector, re-connecting to a server I'd already authed against last night</span>
+<span class="str">Client Not Registered</span>
+<span class="com">// The client ID 248ccdc4-... was not found in the server's client registry.</span></pre>
+      <div class="arch" style="max-width:600px">
+        <div class="arch-step"><span class="tag">1</span> <span class="step-text">Inspector calls <span class="mono">/register</span>, caches the client ID it gets back &mdash; forever, in a local file</span></div>
         <div class="arch-arrow">&darr;</div>
-        <div class="arch-step"><span class="tag">2</span> Self-sign-up on Cognito Hosted UI &mdash; real OAuth 2.1 (SEP-990)</div>
+        <div class="arch-step"><span class="tag">2</span> <span class="step-text">I redeploy the server; its in&#8209;memory client registry (the one from Part 1, slide C4) resets to empty</span></div>
         <div class="arch-arrow">&darr;</div>
-        <div class="arch-step"><span class="tag">3</span> Connect Claude Desktop / Cursor, add your own tool</div>
+        <div class="arch-step"><span class="tag">3</span> <span class="step-text">Inspector reuses the cached (now&#8209;dead) ID instead of re&#8209;registering &mdash; auth fails</span></div>
       </div>
-      <p class="lede">One shared Cognito pool, your own login. Swapping <span class="mono">AWSCognitoProvider</span> for Okta/Auth0/WorkOS is a one-line change &mdash; that's the enterprise-IdP story made concrete.</p>
+      <p class="lede">Client-side state outlived server-side state across a restart. If you build an OAuth-protected MCP server, your dynamic client registrations need to live somewhere durable &mdash; not just in-process memory &mdash; or every client that registered before your last deploy has to start over.</p>
     </div>
-    <div class="notes">This is the room's 18 minutes, not yours &mdash; walk around, help stragglers, point to kickstart/README.md. If running short, cut to "just add one tool" and skip the IDE-connect step.</div>
+    <div class="notes">Real bug, hit it building this exact deck's demo server the night before. Good live moment if time allows: show the error page, then find+delete the stale entry in ~/.mcp-inspector/storage/oauth.json, reconnect, watch it re-register clean. Cut this slide first if running long &mdash; it's a bonus, not load-bearing.</div>
   </section>
 
   <section class="slide">
-    <div class="eyebrow">05.5 <span class="time">stretch goal &middot; early finishers</span></div>
-    <h2>From "it works on my laptop" to a real URL</h2>
+    <div class="eyebrow">D4 <span class="time">00:37 &middot; 18 min &middot; LIVE: EVERYONE BUILDS</span></div>
+    <h2>Your turn &mdash; no terminal required</h2>
+    <div class="body">
+      <div class="arch" style="max-width:640px">
+        <div class="arch-step"><span class="tag">1</span> <span class="step-text">Open <b>MCP Builder Web</b> in your browser, sign in with the shared workshop login</span></div>
+        <div class="arch-arrow">&darr;</div>
+        <div class="arch-step"><span class="tag">2</span> <span class="step-text">Describe your tool in plain English &mdash; "Draft with AI" turns it into reviewable code</span></div>
+        <div class="arch-arrow">&darr;</div>
+        <div class="arch-step"><span class="tag">3</span> <span class="step-text">Click Deploy &mdash; your own ECS task and CloudFront URL, live in under a minute</span></div>
+      </div>
+      <p class="lede">That's <b>MCP Builder</b> underneath &mdash; the always-on launcher that takes your validated tool and provisions it a real, dedicated server via boto3. Same engine every path in this talk uses; this is just the no-code front door to it.</p>
+    </div>
+    <div class="notes">This is the room's 18 minutes, not yours &mdash; walk around, help with logins. Keep this clearly separate from the FastMCP/Python server built on stage in D1 &mdash; that was the speaker's own reference server, not what attendees write. Nobody needs to open an editor for this segment.</div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">D5 <span class="time">stretch goal &middot; early finishers</span></div>
+    <h2>Want to see the code underneath?</h2>
     <div class="body">
       <div class="trio">
         <div class="pathcard">
@@ -306,22 +435,22 @@ mcp.run()  <span class="com"># stdio, for now</span></pre>
         </div>
         <div class="pathcard">
           <div class="ptitle">submit.py</div>
-          <div class="pdesc">Your own tool code, same markers you already wrote in <span class="mono">server_template.py</span>. One command, one URL back.</div>
-          <span class="pwho">the intended path</span>
+          <div class="pdesc">Clone <span class="mono">kickstart/</span>, write a real FastMCP tool, run one script. Same markers the web app's AI draft also produces.</div>
+          <span class="pwho">the hand-written path</span>
         </div>
         <div class="pathcard">
-          <div class="ptitle">Click &amp; deploy</div>
-          <div class="pdesc">Describe it in a sentence. An agent drafts the code, you approve, it's live &mdash; no terminal at all.</div>
-          <span class="pwho">zero code</span>
+          <div class="ptitle">Electron chat agent</div>
+          <div class="pdesc">Describe it in chat to a Bedrock-backed desktop agent &mdash; it drafts, you approve, it deploys. No IDE at all.</div>
+          <span class="pwho">chat-driven</span>
         </div>
       </div>
-      <p class="lede">Same <span class="mono">submit_server</span> tool underneath every path &mdash; AST-validated, least-privilege task role, your own CloudFront domain. Project the URLs in Inspector as they land.</p>
+      <p class="lede">Same <span class="mono">submit_server</span> tool underneath every path, including the web app you just used &mdash; AST-validated, least-privilege task role, your own CloudFront domain. Project the URLs in Inspector as they land.</p>
     </div>
     <div class="notes">This is new, built the night before &mdash; the payoff shot. Have the web app open and ready; ask for one volunteer to describe a tool out loud, draft it live, approve, and watch the URL appear in Inspector on the shared screen.</div>
   </section>
 
   <section class="slide">
-    <div class="eyebrow">06 <span class="time">00:51 &middot; 4 min</span></div>
+    <div class="eyebrow">CLOSING <span class="time">00:55 &middot; 4 min</span></div>
     <h2>Closing: Skills over MCP</h2>
     <div class="body">
       <div class="sep-flow">
@@ -334,6 +463,7 @@ mcp.run()  <span class="com"># stdio, for now</span></pre>
       <ul class="points">
         <li><b>The question:</b> does MCP need a first-class "skill" primitive, or do resources/prompts already cover it?</li>
         <li><b>The answer:</b> a Resources-based extension. Skills stay lightweight &mdash; no server, no auth, no runtime &mdash; but travel through the same MCP channel your tools already use.</li>
+        <li><b>No new verbs.</b> Skills ride on <span class="mono">resources/list</span> and <span class="mono">resources/read</span> &mdash; same list-then-fetch pattern from C4.5, now also carrying skill definitions tagged by kind. That reuse is the point.</li>
       </ul>
       <p class="lede" style="font-style:italic">"Knowledge is a Skill, connectivity is MCP."</p>
     </div>
