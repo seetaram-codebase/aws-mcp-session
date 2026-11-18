@@ -188,7 +188,11 @@ def ensure_role(iam, account_id, region, repo, role_name, bucket_name, provider_
                     "ecr:GetDownloadUrlForLayer", "ecr:BatchGetImage", "ecr:PutImage",
                     "ecr:InitiateLayerUpload", "ecr:UploadLayerPart", "ecr:CompleteLayerUpload",
                 ],
-                "Resource": f"arn:aws:ecr:{region}:{account_id}:repository/mcp-finance-server",
+                "Resource": [
+                    f"arn:aws:ecr:{region}:{account_id}:repository/mcp-finance-server",
+                    f"arn:aws:ecr:{region}:{account_id}:repository/mcp-launcher",
+                    f"arn:aws:ecr:{region}:{account_id}:repository/mcp-attendee-base",
+                ],
             },
             {
                 "Sid": "EcrAuth",
@@ -290,6 +294,8 @@ def ensure_role(iam, account_id, region, repo, role_name, bucket_name, provider_
                 "Resource": [
                     f"arn:aws:iam::{account_id}:role/mcp-server-ecs-execution",
                     f"arn:aws:iam::{account_id}:role/mcp-server-ecs-task",
+                    f"arn:aws:iam::{account_id}:role/mcp-attendee-ecs-task",
+                    f"arn:aws:iam::{account_id}:role/launcher-ecs-task",
                 ],
             },
             {
@@ -300,7 +306,10 @@ def ensure_role(iam, account_id, region, repo, role_name, bucket_name, provider_
                     "logs:PutRetentionPolicy", "logs:TagResource", "logs:ListTagsForResource",
                     "logs:DescribeLogStreams",
                 ],
-                "Resource": f"arn:aws:logs:{region}:{account_id}:log-group:/ecs/mcp-finance-server*",
+                "Resource": [
+                    f"arn:aws:logs:{region}:{account_id}:log-group:/ecs/mcp-finance-server*",
+                    f"arn:aws:logs:{region}:{account_id}:log-group:/ecs/mcp-launcher*",
+                ],
             },
             {
                 "Sid": "LogsDescribeUnscoped",

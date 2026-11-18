@@ -65,15 +65,19 @@ def _register_attendee_tools() -> None:
 
     validate(code)
 
+    # __import__ is included so plain `import random` etc. works inside a
+    # tool body -- safe despite being in DISALLOWED_CALLS above, because that
+    # check is against the SOURCE AST (blocks writing `__import__("os")`
+    # directly); the module actually reachable via a real `import` statement
+    # is still constrained to ALLOWED_IMPORTS by validate()'s own AST walk,
+    # which runs before this exec ever happens.
+    allowed_builtin_names = (
+        "len", "range", "str", "int", "float", "bool", "dict", "list", "tuple",
+        "min", "max", "sum", "round", "abs", "__import__",
+    )
     namespace: dict = {}
-    restricted_builtins = {
-        name: getattr(__builtins__, name)
-        for name in ("len", "range", "str", "int", "float", "bool", "dict", "list", "tuple", "min", "max", "sum", "round", "abs")
-    } if not isinstance(__builtins__, dict) else {
-        name: __builtins__[name]
-        for name in ("len", "range", "str", "int", "float", "bool", "dict", "list", "tuple", "min", "max", "sum", "round", "abs")
-        if name in __builtins__
-    }
+    builtins_source = __builtins__ if isinstance(__builtins__, dict) else vars(__builtins__)
+    restricted_builtins = {name: builtins_source[name] for name in allowed_builtin_names if name in builtins_source}
     exec(compile(code, "<attendee_tool>", "exec"), {"__builtins__": restricted_builtins}, namespace)
 
     registered = 0

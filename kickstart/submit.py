@@ -30,7 +30,8 @@ END_MARKER = "# >>> SUBMIT END"
 def extract_tool_code() -> str:
     text = SERVER_FILE.read_text()
     try:
-        start = text.index(START_MARKER) + len(START_MARKER)
+        marker_pos = text.index(START_MARKER)
+        start = text.index("\n", marker_pos) + 1  # skip past the rest of the marker line
         end = text.index(END_MARKER, start)
     except ValueError:
         raise SystemExit(
