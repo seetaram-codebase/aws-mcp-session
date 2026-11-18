@@ -68,6 +68,10 @@ resource "aws_cloudfront_distribution" "builder_web" {
       https_port             = 443
       origin_protocol_policy = "http-only"
       origin_ssl_protocols   = ["TLSv1.2"]
+      # Max allowed (default 30s) -- the /api/deploy call this origin serves
+      # proxies through to the Launcher's own submit_server call, which can
+      # run long; give it the most headroom CloudFront allows.
+      origin_read_timeout = 60
     }
   }
 

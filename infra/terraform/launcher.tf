@@ -157,6 +157,10 @@ resource "aws_cloudfront_distribution" "launcher" {
       https_port             = 443
       origin_protocol_policy = "http-only"
       origin_ssl_protocols   = ["TLSv1.2"]
+      # Max allowed (default 30s) -- submit_server's boto3 provisioning can
+      # run long; give it the most headroom CloudFront allows rather than
+      # have a slow-but-successful request come back as a hard failure.
+      origin_read_timeout = 60
     }
   }
 

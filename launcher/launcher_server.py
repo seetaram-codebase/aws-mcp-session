@@ -293,12 +293,18 @@ def submit_server(attendee_name: str, tool_code: str) -> dict:
         loadBalancers=[{"targetGroupArn": tg, "containerName": name, "containerPort": 8000}],
     )
 
-    # Wait for the ECS service to settle so the URL we hand back is actually
-    # live, not "accepted but still booting". CloudFront propagation itself
-    # can take a couple more minutes beyond this -- flagged to the caller.
-    waiter = ecs.get_waiter("services_stable")
+    # Deliberately only a SHORT best-effort poll, not a wait-for-steady-state
+    # (that alone can take 30-90s+, which blows past CloudFront's origin
+    # response timeout for callers sitting behind it, like builder-web --
+    # turning a slow-but-successful deploy into a hard HTTP failure on their
+    # end). The service reaching steady state happens in the background
+    # regardless of whether we wait for it here; CloudFront propagation
+    # beyond this point can take a couple more minutes either way, which is
+    # already flagged to the caller below.
     try:
-        waiter.wait(cluster=CLUSTER_NAME, services=[name], WaiterConfig={"Delay": 10, "MaxAttempts": 18})
+        ecs.get_waiter("services_stable").wait(
+            cluster=CLUSTER_NAME, services=[name], WaiterConfig={"Delay": 5, "MaxAttempts": 2}
+        )
     except Exception:
         pass  # Return the URL regardless -- caller can check status themselves.
 
