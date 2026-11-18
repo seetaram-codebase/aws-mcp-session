@@ -3,6 +3,7 @@ __pycache__/
 infra/cognito_env.json
 kickstart/.env
 server/.env
+launcher/.env
 
 # Terraform
 infra/terraform/.terraform/

@@ -67,7 +67,17 @@ def ping(name: str = "world") -> dict:
 # Ideas if you want a starting point: a joke generator, a unit converter, a
 # tiny todo list (in-memory dict is fine for the workshop), a "roll dice"
 # tool, a lookup against any free public API you already know.
+#
+# Keep your function(s) between the two SUBMIT markers below -- that's the
+# exact text submit.py sends to the Launcher when you're ready to go live
+# (see "7. Submit it live" in README.md). Only plain functions using
+# random/math/datetime/json/re -- no file, network, or subprocess access,
+# it won't pass validation.
 # ---------------------------------------------------------------------------
+
+# >>> SUBMIT START (only edit between these two lines)
+
+# >>> SUBMIT END
 
 
 if __name__ == "__main__":

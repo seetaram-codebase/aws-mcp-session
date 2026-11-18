@@ -37,6 +37,19 @@ output "ecr_repository_url" {
   value = aws_ecr_repository.mcp_server.repository_url
 }
 
+output "launcher_public_url" {
+  description = "MCP Builder Launcher -- submit.py / the Builder agent talks to this"
+  value       = local.launcher_public_url
+}
+
+output "launcher_ecr_repository_url" {
+  value = aws_ecr_repository.launcher.repository_url
+}
+
+output "attendee_base_ecr_repository_url" {
+  value = aws_ecr_repository.attendee_base.repository_url
+}
+
 output "porkbun_dns_record_for_custom_domain" {
   description = <<-EOT
     Optional upgrade: to use mcp.seetaram.dev instead of the CloudFront

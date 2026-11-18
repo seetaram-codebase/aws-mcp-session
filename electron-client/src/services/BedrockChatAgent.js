@@ -61,7 +61,15 @@ class BedrockChatAgent {
         let resultContent;
         try {
           const toolResult = await this._mcpToolClient.callTool(name, input);
-          resultContent = [{ json: toolResult.content ?? toolResult }];
+          if (toolResult.structuredContent) {
+            resultContent = [{ json: toolResult.structuredContent }];
+          } else {
+            const text = (toolResult.content ?? [])
+              .filter((block) => block.type === "text")
+              .map((block) => block.text)
+              .join("\n");
+            resultContent = [{ text }];
+          }
         } catch (err) {
           resultContent = [{ text: `Tool error: ${err.message}` }];
         }

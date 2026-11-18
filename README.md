@@ -10,7 +10,8 @@ facts, and sources.
 | Path | What it is |
 |---|---|
 | `server/` | Speaker's own reference demo -- a Personal Finance Guide MCP server (FastMCP), OAuth 2.1-protected via AWS Cognito. Built live on stage in the "Build: FastMCP server" segment; also what's deployed to ECS (see `infra/terraform/ecs.tf`). |
-| `kickstart/` | What attendees clone for the live hands-on segment. Generic OAuth-protected FastMCP template + README -- add your own tool, connect your IDE, done. |
+| `kickstart/` | What attendees clone for the live hands-on segment. Generic OAuth-protected FastMCP template + README -- add your own tool, connect your IDE, done. Also has `submit.py` (step 7): sends your tool to `launcher/` to go live on its own dedicated ECS server. |
+| `launcher/` | The "MCP Builder" -- an always-on FastMCP server whose one tool, `submit_server`, takes an attendee's validated tool code and provisions a brand new ECS task + CloudFront domain for it via boto3 (no Terraform/GitHub Actions per attendee). `attendee_base/` is the one shared Docker image every attendee server reuses. |
 | `electron-client/` | A standalone desktop chat agent -- Bedrock Claude reasoning + the MCP server's tools over the same OAuth flow, no IDE involved. The "MCP isn't just an IDE feature" demo. |
 | `infra/` | Provisions the single, shared Cognito User Pool (OAuth Authorization Server) plus, now, the ECS Fargate + ALB + CloudFront deployment of `server/`. Cognito: a one-shot `boto3` script, or Terraform (what CI uses). ECS: Terraform only. |
 | `.github/workflows/cognito-infra.yml` | Manual (`workflow_dispatch`) pipeline for the Cognito pool: plan/apply/destroy, OIDC to AWS, no stored access keys. |

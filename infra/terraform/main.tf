@@ -24,6 +24,13 @@ locals {
     "http://127.0.0.1:8000/auth/callback",
     # ECS-deployed server, fronted by CloudFront for HTTPS -- see ecs.tf.
     "https://${aws_cloudfront_distribution.mcp_server.domain_name}/auth/callback",
+    # MCP Builder Launcher, fronted by its own CloudFront -- see launcher.tf.
+    # NOTE: launcher.tf's submit_server tool appends further callback URLs
+    # to this same app client at runtime (one per attendee server it
+    # provisions) -- Terraform does not own those, only these fixed ones,
+    # so expect `terraform plan` to show perpetual drift here once
+    # attendees start submitting. That's expected, not a bug.
+    "https://${aws_cloudfront_distribution.launcher.domain_name}/auth/callback",
   ]
 
   mcp_base_url = "http://localhost:8000"

@@ -97,6 +97,28 @@ def roll_dice(sides: int = 6) -> dict:
 Save, `Ctrl+C` the server, rerun `python server_template.py`. Ask your
 IDE's agent to use your new tool.
 
+## 7. Submit it live
+
+Once your tool works locally, go live on its own dedicated server with a
+real public URL:
+
+```
+python submit.py "your-name-or-team"
+```
+
+This reads whatever you wrote between the `# >>> SUBMIT START` /
+`# >>> SUBMIT END` markers in `server_template.py` and sends it to the
+Launcher (same OAuth login as step 4). The Launcher stands up a brand new
+ECS task running your code, under its own HTTPS domain -- takes a couple of
+minutes (mostly CloudFront propagation), then prints your URL. Hand that URL
+to the speaker to add to the shared MCP Inspector screen, or add it yourself
+if you've got Inspector running.
+
+Only plain functions using `random`/`math`/`datetime`/`json`/`re` are
+allowed -- no file, network, or subprocess access. Validation happens twice
+(once before anything is deployed, once again when your server boots), so
+if it's going to be rejected, you'll know quickly.
+
 ## FAQ
 
 **Why do we all share one `COGNITO_CLIENT_ID`?**
