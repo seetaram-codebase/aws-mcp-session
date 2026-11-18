@@ -31,6 +31,12 @@ locals {
     # so expect `terraform plan` to show perpetual drift here once
     # attendees start submitting. That's expected, not a bug.
     "https://${aws_cloudfront_distribution.launcher.domain_name}/auth/callback",
+    # MCP Builder Web (builder-web/) -- the click-to-deploy UI. This one is
+    # an OAuth CLIENT of the Launcher, not of Cognito directly, so this
+    # fixed entry is actually unused by this app client; left here only so
+    # Terraform's dependency graph has a reason to exist if that ever
+    # changes. The real callback it registers is via DCR against the
+    # Launcher (see builder-web/app.py), nothing to maintain here.
   ]
 
   mcp_base_url = "http://localhost:8000"

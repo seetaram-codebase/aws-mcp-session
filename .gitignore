@@ -4,6 +4,7 @@ infra/cognito_env.json
 kickstart/.env
 server/.env
 launcher/.env
+builder-web/.env
 
 # Terraform
 infra/terraform/.terraform/

@@ -123,6 +123,18 @@ infrastructure with a live walkthrough, not a from-zero build.
                 no server-code changes, which is the ADFS/IAM Identity
                 Center bullet made concrete.
 
+                STRETCH GOAL (not required, no extra setup): anyone done
+                early can go one step further with `python submit.py
+                "name"` -- sends their tool to the Launcher (launcher/),
+                which stands up their OWN dedicated ECS task + CloudFront
+                domain running it, live, in ~1-2 min. No new AWS account,
+                no GitHub, same Cognito login they already have. Project
+                the resulting URLs in MCP Inspector on the shared screen
+                as they come in -- this is the "look, it's really running
+                in the speaker's AWS account" payoff shot. Don't budget
+                room time for this: it's a take-home / early-finisher
+                option, not a step everyone needs to complete.
+
 00:51  (4 min)  Closing: Skills over MCP
                 SEP-2076 -> SEP-2640, and what it means for where MCP goes
                 next.
@@ -173,6 +185,24 @@ Write the FastMCP server -> build & push to ECR -> `ecs create-service`
 with the task role attached -> register target group behind the ALB. All
 scriptable with the CLI or CDK ahead of the talk; the "build" segment on
 stage only adds one new tool to an already-running server.
+
+STRETCH-GOAL PATH: THE LAUNCHER
+For attendees who want to see their OWN tool actually running in AWS
+(not just locally), launcher/ is a second always-on FastMCP server --
+same Cognito pool, so no new login -- whose one tool, submit_server,
+does the CONTAINER PATH above programmatically via boto3 the moment an
+attendee submits code (python submit.py, or by asking the Electron demo
+agent in chat to "build and deploy" a tool -- that path adds a human
+approval click before anything deploys, since the code is LLM-authored).
+Each submission gets its own ECS task + its own free CloudFront domain
+(needed because Cognito's OAuth callback list is exact-match, no
+wildcards -- one shared domain can't serve multiple logins). Submitted
+code is AST-validated against an import allowlist (random/math/
+datetime/json/re only, no file/network/subprocess) before anything
+touches AWS. This is the "zero-trust guardrails" bullet made concrete a
+second time, from the opposite direction: least-privilege on the
+INFRASTRUCTURE side (section 05's IAM task role) plus validation on the
+CODE side (what actually gets allowed to run on that infrastructure).
 
 
 ====================================================

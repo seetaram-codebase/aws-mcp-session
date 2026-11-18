@@ -63,7 +63,8 @@ jobs:
           terraform apply -auto-approve -var "aws_region=${{ vars.AWS_REGION }}" \
             -target=aws_ecr_repository.mcp_server \
             -target=aws_ecr_repository.launcher \
-            -target=aws_ecr_repository.attendee_base
+            -target=aws_ecr_repository.attendee_base \
+            -target=aws_ecr_repository.builder_web
 
       - uses: aws-actions/amazon-ecr-login@v2
         if: inputs.action == 'apply'
@@ -96,13 +97,23 @@ jobs:
           docker push "$IMAGE"
           echo "attendee_base_image_tag=${{ github.sha }}" >> "$GITHUB_ENV"
 
+      - name: Build and push builder-web image
+        if: inputs.action == 'apply'
+        working-directory: builder-web
+        run: |
+          IMAGE="${{ steps.ecr-login.outputs.registry }}/mcp-builder-web:${{ github.sha }}"
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "builder_web_image_tag=${{ github.sha }}" >> "$GITHUB_ENV"
+
       - name: Terraform apply
         if: inputs.action == 'apply'
         run: |
           terraform apply -auto-approve -var "aws_region=${{ vars.AWS_REGION }}" \
             -var "image_tag=${{ env.image_tag }}" \
             -var "launcher_image_tag=${{ env.launcher_image_tag }}" \
-            -var "attendee_base_image_tag=${{ env.attendee_base_image_tag }}"
+            -var "attendee_base_image_tag=${{ env.attendee_base_image_tag }}" \
+            -var "builder_web_image_tag=${{ env.builder_web_image_tag }}"
 
       - name: Terraform destroy
         if: inputs.action == 'destroy'
@@ -118,6 +129,8 @@ jobs:
             echo ""
             echo "MCP Builder Launcher URL: $(terraform output -raw launcher_public_url)"
             echo "(give attendees this as LAUNCHER_BASE_URL in kickstart/.env for step 7, submit.py)"
+            echo ""
+            echo "MCP Builder Web URL (click-to-deploy UI): $(terraform output -raw builder_web_public_url)"
             echo ""
             echo "Optional custom domain -- add this CNAME at Porkbun if you want mcp.seetaram.dev:"
             echo '```'

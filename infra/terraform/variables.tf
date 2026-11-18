@@ -27,6 +27,12 @@ variable "attendee_base_image_tag" {
   default     = "latest"
 }
 
+variable "builder_web_image_tag" {
+  type        = string
+  description = "Tag of the mcp-builder-web image in ECR to deploy"
+  default     = "latest"
+}
+
 variable "max_attendee_servers" {
   type        = number
   description = "Cap on concurrently active attendee servers the Launcher will provision -- a guardrail against one runaway submit loop spinning up unlimited infrastructure"

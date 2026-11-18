@@ -50,6 +50,15 @@ output "attendee_base_ecr_repository_url" {
   value = aws_ecr_repository.attendee_base.repository_url
 }
 
+output "builder_web_public_url" {
+  description = "MCP Builder Web -- the click-to-deploy UI"
+  value       = local.builder_web_public_url
+}
+
+output "builder_web_ecr_repository_url" {
+  value = aws_ecr_repository.builder_web.repository_url
+}
+
 output "porkbun_dns_record_for_custom_domain" {
   description = <<-EOT
     Optional upgrade: to use mcp.seetaram.dev instead of the CloudFront

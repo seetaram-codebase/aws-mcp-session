@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Building an AWS-Native MCP Server</title>
+<style>
+  :root {
+    --bg: #f6f4f0;
+    --surface: #ffffff;
+    --ink: #15191e;
+    --ink-muted: #5a6370;
+    --border: #e2ddd3;
+    --accent: #b85f22;
+    --accent-ink: #ffffff;
+    --accent2: #2f7d7d;
+    --code-bg: #15191e;
+    --code-ink: #e4e1d9;
+    --code-accent: #e7a86b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0b0f14;
+      --surface: #121920;
+      --ink: #e8ecf1;
+      --ink-muted: #8a97a8;
+      --border: #233040;
+      --accent: #d97b3f;
+      --accent-ink: #0b0f14;
+      --accent2: #5fb3b3;
+      --code-bg: #060a0f;
+      --code-ink: #d7dadf;
+      --code-accent: #e7a86b;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0b0f14;
+    --surface: #121920;
+    --ink: #e8ecf1;
+    --ink-muted: #8a97a8;
+    --border: #233040;
+    --accent: #d97b3f;
+    --accent-ink: #0b0f14;
+    --accent2: #5fb3b3;
+    --code-bg: #060a0f;
+    --code-ink: #d7dadf;
+    --code-accent: #e7a86b;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    overflow: hidden;
+  }
+
+  .deck { position: relative; height: 100vh; width: 100vw; }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    padding: 6vh 9vw;
+  }
+  .slide.active { display: flex; }
+
+  .eyebrow {
+    font-family: "SF Mono", "Cascadia Code", Consolas, monospace;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+    margin: 0 0 14px;
+  }
+  .eyebrow .time {
+    color: var(--ink-muted);
+    font-weight: 400;
+    margin-left: 10px;
+  }
+
+  h1 { font-size: clamp(34px, 5vw, 58px); line-height: 1.08; margin: 0 0 18px; text-wrap: balance; font-weight: 700; }
+  h2 { font-size: clamp(28px, 4vw, 44px); line-height: 1.12; margin: 0 0 22px; text-wrap: balance; font-weight: 700; }
+  .lede { font-size: clamp(16px, 1.6vw, 21px); color: var(--ink-muted); max-width: 62ch; line-height: 1.5; margin: 0 0 8px; }
+
+  .body { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 24px; min-height: 0; }
+
+  ul.points { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 16px; max-width: 70ch; }
+  ul.points li {
+    font-size: clamp(16px, 1.8vw, 22px); line-height: 1.45; padding-left: 28px; position: relative;
+  }
+  ul.points li::before {
+    content: "—"; position: absolute; left: 0; color: var(--accent); font-weight: 700;
+  }
+  ul.points li b { color: var(--ink); }
+  ul.points li .muted { color: var(--ink-muted); font-size: 0.85em; }
+
+  code, .mono { font-family: "SF Mono", "Cascadia Code", Consolas, monospace; }
+
+  pre {
+    background: var(--code-bg);
+    color: var(--code-ink);
+    border-radius: 12px;
+    padding: 20px 24px;
+    font-family: "SF Mono", "Cascadia Code", Consolas, monospace;
+    font-size: clamp(12px, 1.3vw, 16px);
+    line-height: 1.6;
+    overflow-x: auto;
+    max-width: 100%;
+    margin: 0;
+  }
+  pre .kw { color: var(--accent2); }
+  pre .fn { color: var(--code-accent); }
+  pre .str { color: #9fd2a0; }
+  pre .com { color: #6b7684; font-style: italic; }
+
+  .arch { display: flex; flex-direction: column; gap: 0; max-width: 560px; }
+  .arch-step {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 18px; font-size: clamp(14px, 1.5vw, 17px); display: flex; align-items: center; gap: 12px;
+  }
+  .arch-step .tag {
+    font-family: "SF Mono", "Cascadia Code", Consolas, monospace; font-size: 11px; color: var(--accent);
+    border: 1px solid var(--accent); border-radius: 5px; padding: 2px 6px; flex-shrink: 0;
+  }
+  .arch-arrow { text-align: center; color: var(--ink-muted); font-size: 18px; margin: 2px 0; }
+
+  .trio { display: flex; gap: 18px; flex-wrap: wrap; }
+  .trio .pathcard {
+    flex: 1; min-width: 200px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 20px 22px;
+  }
+  .pathcard .ptitle { font-weight: 700; font-size: 17px; margin-bottom: 6px; }
+  .pathcard .pdesc { font-size: 14px; color: var(--ink-muted); line-height: 1.5; }
+  .pathcard .pwho { font-family: "SF Mono", "Cascadia Code", Consolas, monospace; font-size: 11px; color: var(--accent2); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 10px; display: block; }
+
+  .sep-flow { display: flex; align-items: center; gap: 16px; font-size: clamp(16px, 2vw, 24px); flex-wrap: wrap; }
+  .sep-flow .pill {
+    font-family: "SF Mono", "Cascadia Code", Consolas, monospace; font-size: 0.6em;
+    border-radius: 999px; padding: 8px 16px; border: 1px solid var(--border);
+  }
+  .sep-flow .pill.draft { color: var(--ink-muted); }
+  .sep-flow .pill.final { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
+  .sep-flow .arrow { color: var(--accent); font-size: 0.8em; }
+
+  .big-stat { font-size: clamp(60px, 10vw, 140px); font-weight: 800; color: var(--accent); line-height: 1; letter-spacing: -0.02em; }
+  .big-stat + .lede { margin-top: 4px; }
+
+  .footer-row { display: flex; justify-content: space-between; align-items: flex-end; }
+  .slideno { font-family: "SF Mono", "Cascadia Code", Consolas, monospace; font-size: 12px; color: var(--ink-muted); }
+
+  .notes {
+    display: none;
+    position: absolute; left: 0; right: 0; bottom: 0;
+    background: var(--surface); border-top: 2px solid var(--accent);
+    padding: 16px 9vw; font-size: 14px; color: var(--ink-muted); line-height: 1.5; max-height: 30vh; overflow-y: auto;
+  }
+  body.show-notes .notes { display: block; }
+  .notes b { color: var(--ink); }
+
+  .progress { position: fixed; top: 0; left: 0; height: 3px; background: var(--accent); transition: width 0.2s; z-index: 10; }
+
+  .hint {
+    position: fixed; bottom: 14px; right: 18px; font-family: "SF Mono", "Cascadia Code", Consolas, monospace;
+    font-size: 11px; color: var(--ink-muted); opacity: 0.6;
+  }
+
+  .title-slide { justify-content: center; }
+  .title-slide .kicker { font-family: "SF Mono", "Cascadia Code", Consolas, monospace; color: var(--accent2); letter-spacing: 0.1em; text-transform: uppercase; font-size: 14px; margin-bottom: 20px; }
+  .title-slide h1 { max-width: 16ch; }
+  .title-slide .meta { margin-top: 32px; display: flex; gap: 28px; color: var(--ink-muted); font-size: 15px; }
+  .title-slide .meta .mono { color: var(--ink); }
+
+  .thanks { justify-content: center; align-items: flex-start; }
+  .links { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+  .links a { color: var(--accent2); text-decoration: none; font-size: 15px; }
+  .links a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+
+  <section class="slide active title-slide">
+    <div class="kicker">AWS Meetup &middot; 45&ndash;60 min</div>
+    <h1>Building an AWS-Native<br/>MCP Server</h1>
+    <p class="lede">From concept to production: designing, deploying, and securing a custom Model Context Protocol server on Amazon ECS Fargate &mdash; and closing with where the protocol itself is headed next.</p>
+    <div class="meta">
+      <span>Stack: <span class="mono">Python &middot; FastMCP &middot; ECS Fargate &middot; ALB &middot; IAM</span></span>
+    </div>
+    <div class="notes"><b>Open with energy.</b> This is a demo-driven talk, not a slide-reading one &mdash; the infra is already deployed and waiting, so every "watch this happen" moment should actually run live. Don't apologize for the room running long; the hands-on segment IS the talk.</div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">00 <span class="time">00:00 &middot; 5 min</span></div>
+    <h2>"Just give the agent an access key."</h2>
+    <div class="body">
+      <ul class="points">
+        <li><b>That's how most people start</b> giving an AI coding agent access to cloud infrastructure. <span class="muted">A static key, pasted into a config file, full account permissions.</span></li>
+        <li><b>It breaks down fast.</b> No scoping, no audit trail, no revocation without rotating the key everywhere it's used.</li>
+        <li><b>The real risk isn't malice &mdash; it's a multi-step hallucination</b> with no guardrails between "the agent decided to" and "it actually happened in production."</li>
+      </ul>
+    </div>
+    <div class="notes">Hook: ask the room "who's pasted an API key into a Claude Desktop config?" Get a laugh/nod, then pivot &mdash; that's the exact problem this talk solves.</div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">01 <span class="time">00:05 &middot; 6 min</span></div>
+    <h2>The MCP blueprint</h2>
+    <div class="body">
+      <div class="arch">
+        <div class="arch-step"><span class="tag">TOOLS</span> Actions the agent can invoke &mdash; <span class="mono">get_quote()</span>, not just read data</div>
+        <div class="arch-arrow">+</div>
+        <div class="arch-step"><span class="tag">RESOURCES</span> Context the agent can read &mdash; files, API responses, state</div>
+        <div class="arch-arrow">+</div>
+        <div class="arch-step"><span class="tag">PROMPTS</span> Reusable instruction templates the host can surface</div>
+      </div>
+      <p class="lede">One client&ndash;server handshake, three primitives. Everything else in this talk is "how do we run the server half of that handshake safely, in AWS."</p>
+    </div>
+    <div class="notes">Keep this tight &mdash; 6 min budget. The audience mostly already knows MCP exists; the news is the AWS productionization story, not the protocol basics.</div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">02 <span class="time">00:11 &middot; 9 min &middot; LIVE BUILD</span></div>
+    <h2>A FastMCP server, on stage</h2>
+    <div class="body">
+      <pre><span class="kw">from</span> fastmcp <span class="kw">import</span> FastMCP
+
+mcp = FastMCP(<span class="str">"Personal Finance Guide"</span>)
+
+<span class="com"># A tool is a typed function with a docstring --</span>
+<span class="com"># FastMCP turns the signature into the schema the agent sees.</span>
+@mcp.tool
+<span class="kw">def</span> <span class="fn">get_portfolio</span>() -> dict:
+    <span class="str">"""Return the user's current holdings and cash balance."""</span>
+    <span class="kw">return</span> _PORTFOLIO
+
+mcp.run()  <span class="com"># stdio, for now</span></pre>
+      <p class="lede">Run it locally over stdio. No AWS yet &mdash; this is the "brittle local prototype" from the abstract, built in real time.</p>
+    </div>
+    <div class="notes">Actually type this live if time allows, don't paste. get_portfolio / get_quote / analyze_allocation are the three tools in server/finance_mcp_server.py &mdash; that file is the safety net if live-coding goes sideways.</div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">03 <span class="time">00:20 &middot; 8 min</span></div>
+    <h2>Ship it: ECS Fargate + ALB</h2>
+    <div class="body">
+      <div class="arch">
+        <div class="arch-step"><span class="tag">CLIENT</span> Claude Desktop / Cursor &mdash; remote MCP config</div>
+        <div class="arch-arrow">&darr;</div>
+        <div class="arch-step"><span class="tag">ALB</span> TLS termination, routes to the ECS service</div>
+        <div class="arch-arrow">&darr;</div>
+        <div class="arch-step"><span class="tag">ECS</span> Fargate task &mdash; same server, Streamable HTTP, stateless</div>
+      </div>
+      <p class="lede">Streamable HTTP (post SEP&#8209;2575/2567) is what makes this horizontally scalable &mdash; an SSE-session server couldn't sit behind a plain load balancer like this.</p>
+    </div>
+    <div class="notes">Pre-deployed &mdash; walk the actual console/terminal, hit the real CloudFront URL. Don't build this live, just prove it's real.</div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">04 <span class="time">00:28 &middot; 5 min</span></div>
+    <h2>Zero-trust: the IAM task role</h2>
+    <div class="body">
+      <pre><span class="com">// mcp-server-ecs-task -- no policies attached.</span>
+<span class="com">// This demo's tools are all in-memory mock data,</span>
+<span class="com">// so the task role grants nothing. On purpose.</span>
+{
+  <span class="str">"Version"</span>: <span class="str">"2012-10-17"</span>,
+  <span class="str">"Statement"</span>: []
+}</pre>
+      <ul class="points">
+        <li><b>Least privilege taken to its logical conclusion.</b> <span class="muted">Call a tool that needs a real AWS read, watch it fail without the role &mdash; then show the one-line fix.</span></li>
+      </ul>
+    </div>
+    <div class="notes">Live: try calling a tool that would need ec2:Describe* without the permission, show the AccessDenied, then add the policy and re-run. Visceral, not theoretical.</div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">05 <span class="time">00:33 &middot; 18 min &middot; LIVE: EVERYONE BUILDS</span></div>
+    <h2>Your turn &mdash; OAuth-protected, for real</h2>
+    <div class="body">
+      <div class="arch" style="max-width:620px">
+        <div class="arch-step"><span class="tag">1</span> Clone <span class="mono">kickstart/</span>, run <span class="mono">server_template.py</span></div>
+        <div class="arch-arrow">&darr;</div>
+        <div class="arch-step"><span class="tag">2</span> Self-sign-up on Cognito Hosted UI &mdash; real OAuth 2.1 (SEP-990)</div>
+        <div class="arch-arrow">&darr;</div>
+        <div class="arch-step"><span class="tag">3</span> Connect Claude Desktop / Cursor, add your own tool</div>
+      </div>
+      <p class="lede">One shared Cognito pool, your own login. Swapping <span class="mono">AWSCognitoProvider</span> for Okta/Auth0/WorkOS is a one-line change &mdash; that's the enterprise-IdP story made concrete.</p>
+    </div>
+    <div class="notes">This is the room's 18 minutes, not yours &mdash; walk around, help stragglers, point to kickstart/README.md. If running short, cut to "just add one tool" and skip the IDE-connect step.</div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">05.5 <span class="time">stretch goal &middot; early finishers</span></div>
+    <h2>From "it works on my laptop" to a real URL</h2>
+    <div class="body">
+      <div class="trio">
+        <div class="pathcard">
+          <div class="ptitle">Inspector</div>
+          <div class="pdesc">Call <span class="mono">submit_server</span> directly &mdash; paste code, see it deploy, in the same tool you're already using to browse tools.</div>
+          <span class="pwho">most direct</span>
+        </div>
+        <div class="pathcard">
+          <div class="ptitle">submit.py</div>
+          <div class="pdesc">Your own tool code, same markers you already wrote in <span class="mono">server_template.py</span>. One command, one URL back.</div>
+          <span class="pwho">the intended path</span>
+        </div>
+        <div class="pathcard">
+          <div class="ptitle">Click &amp; deploy</div>
+          <div class="pdesc">Describe it in a sentence. An agent drafts the code, you approve, it's live &mdash; no terminal at all.</div>
+          <span class="pwho">zero code</span>
+        </div>
+      </div>
+      <p class="lede">Same <span class="mono">submit_server</span> tool underneath every path &mdash; AST-validated, least-privilege task role, your own CloudFront domain. Project the URLs in Inspector as they land.</p>
+    </div>
+    <div class="notes">This is new, built the night before &mdash; the payoff shot. Have the web app open and ready; ask for one volunteer to describe a tool out loud, draft it live, approve, and watch the URL appear in Inspector on the shared screen.</div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">06 <span class="time">00:51 &middot; 4 min</span></div>
+    <h2>Closing: Skills over MCP</h2>
+    <div class="body">
+      <div class="sep-flow">
+        <span class="pill draft">2026-02-01 &middot; working group formed</span>
+        <span class="arrow">&rarr;</span>
+        <span class="pill draft">SEP-2076 (draft)</span>
+        <span class="arrow">&rarr;</span>
+        <span class="pill final">SEP-2640 &middot; Final, 2026-09-13</span>
+      </div>
+      <ul class="points">
+        <li><b>The question:</b> does MCP need a first-class "skill" primitive, or do resources/prompts already cover it?</li>
+        <li><b>The answer:</b> a Resources-based extension. Skills stay lightweight &mdash; no server, no auth, no runtime &mdash; but travel through the same MCP channel your tools already use.</li>
+      </ul>
+      <p class="lede" style="font-style:italic">"Knowledge is a Skill, connectivity is MCP."</p>
+    </div>
+    <div class="notes">A real, recently-resolved debate &mdash; good closer because it's not hypothetical, it shipped three months before this talk.</div>
+  </section>
+
+  <section class="slide thanks">
+    <div class="eyebrow">Q&amp;A</div>
+    <h1>Thanks &mdash; let's build something.</h1>
+    <div class="links">
+      <a href="#" onclick="return false">modelcontextprotocol.io/seps &mdash; SEP index</a>
+      <a href="#" onclick="return false">modelcontextprotocol.io/seps/2640-skills-extension</a>
+      <a href="#" onclick="return false">modelcontextprotocol.io/community/working-groups/skills-over-mcp</a>
+      <a href="#" onclick="return false">github.com &mdash; this repo's kickstart/README.md</a>
+    </div>
+    <div class="notes">Leave this slide up during Q&amp;A so the repo/kickstart link stays visible for anyone who wants to try it after the talk.</div>
+  </section>
+
+</div>
+
+<div class="hint" id="hint">&larr; &rarr; navigate &middot; N notes &middot; F fullscreen</div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll(".slide"));
+  let i = 0;
+
+  function render() {
+    slides.forEach((s, idx) => s.classList.toggle("active", idx === i));
+    document.getElementById("progress").style.width = ((i + 1) / slides.length * 100) + "%";
+  }
+
+  function go(delta) {
+    i = Math.max(0, Math.min(slides.length - 1, i + delta));
+    render();
+  }
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowRight" || e.key === " " || e.key === "PageDown") go(1);
+    else if (e.key === "ArrowLeft" || e.key === "PageUp") go(-1);
+    else if (e.key.toLowerCase() === "n") document.body.classList.toggle("show-notes");
+    else if (e.key.toLowerCase() === "f") {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+      else document.exitFullscreen();
+    }
+  });
+
+  document.getElementById("deck").addEventListener("click", (e) => {
+    const x = e.clientX / window.innerWidth;
+    if (x > 0.7) go(1);
+    else if (x < 0.3) go(-1);
+  });
+
+  render();
+</script>
+</body>
+</html>

@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MCP Builder</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --ink: #1a1d23;
+    --ink-muted: #6b7280;
+    --border: #e4e7ec;
+    --accent: #e2731f;
+    --accent-ink: #ffffff;
+    --ok: #15803d;
+    --ok-bg: #ecfdf3;
+    --err: #b42318;
+    --err-bg: #fef3f2;
+    --code-bg: #0f1115;
+    --code-ink: #d7dadf;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 32px 20px 80px; }
+  header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand .mark {
+    width: 34px; height: 34px; border-radius: 9px;
+    background: linear-gradient(135deg, var(--accent), #f0a04b);
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-weight: 700; font-size: 16px;
+  }
+  .brand h1 { font-size: 17px; margin: 0; }
+  .brand p { margin: 0; font-size: 12px; color: var(--ink-muted); }
+  #authArea button { font-size: 13px; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 2px rgba(16,24,40,0.04);
+  }
+
+  .hero { text-align: center; padding: 48px 24px; }
+  .hero h2 { font-size: 26px; margin: 0 0 10px; }
+  .hero p { color: var(--ink-muted); font-size: 15px; margin: 0 0 24px; line-height: 1.5; }
+
+  .step-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--accent); margin-bottom: 8px; }
+  label { display: block; font-size: 13px; font-weight: 600; margin: 14px 0 6px; }
+  label:first-of-type { margin-top: 0; }
+
+  input[type="text"], textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 9px;
+    border: 1px solid var(--border);
+    font-size: 14px;
+    font-family: inherit;
+    background: #fbfbfc;
+    color: var(--ink);
+  }
+  textarea { resize: vertical; min-height: 80px; }
+  textarea.code {
+    font-family: "SF Mono", "Cascadia Code", ui-monospace, monospace;
+    background: var(--code-bg);
+    color: var(--code-ink);
+    min-height: 160px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .mode-toggle { display: flex; gap: 8px; margin-bottom: 4px; }
+  .mode-toggle button {
+    flex: 1; padding: 8px; border-radius: 9px; border: 1px solid var(--border);
+    background: #fbfbfc; color: var(--ink-muted); font-size: 13px; cursor: pointer;
+  }
+  .mode-toggle button.active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+
+  button.primary, button.secondary {
+    border: none; border-radius: 9px; padding: 11px 18px; font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: opacity 0.15s;
+  }
+  button.primary { background: var(--accent); color: var(--accent-ink); }
+  button.secondary { background: #eef0f3; color: var(--ink); }
+  button:disabled { opacity: 0.5; cursor: default; }
+  button.primary:hover:not(:disabled), button.secondary:hover:not(:disabled) { opacity: 0.88; }
+
+  .row { display: flex; gap: 10px; margin-top: 18px; }
+  .row > * { flex: 1; }
+
+  .status { font-size: 13px; color: var(--ink-muted); margin-top: 10px; min-height: 18px; }
+  .status.spin::before {
+    content: ""; display: inline-block; width: 11px; height: 11px; margin-right: 6px;
+    border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.7s linear infinite; vertical-align: -1px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .result { border-radius: var(--radius); padding: 18px 20px; margin-top: 16px; font-size: 14px; }
+  .result.ok { background: var(--ok-bg); border: 1px solid #b4e4c4; color: var(--ok); }
+  .result.err { background: var(--err-bg); border: 1px solid #f0b4ac; color: var(--err); }
+  .result a { color: inherit; font-weight: 700; word-break: break-all; }
+  .result .url-box {
+    display: flex; align-items: center; gap: 8px; margin-top: 10px;
+    background: white; border-radius: 8px; padding: 8px 10px; border: 1px solid rgba(0,0,0,0.08);
+  }
+  .result .url-box code { flex: 1; font-size: 13px; word-break: break-all; color: var(--ink); }
+  .result .url-box button { padding: 5px 10px; font-size: 12px; }
+
+  footer { text-align: center; font-size: 12px; color: var(--ink-muted); margin-top: 28px; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="mark">M</div>
+        <div>
+          <h1>MCP Builder</h1>
+          <p>Describe a tool. Click Deploy. Get a real MCP server.</p>
+        </div>
+      </div>
+      <div id="authArea"></div>
+    </header>
+
+    <div id="loggedOut" class="card hero hidden">
+      <h2>Build your own MCP server</h2>
+      <p>No terminal, no AWS account of your own needed &mdash; sign in with the<br/>shared workshop login to deploy a real, live MCP server in a couple of clicks.</p>
+      <button class="primary" onclick="location.href='/login'">Sign in to get started</button>
+    </div>
+
+    <div id="builder" class="card hidden">
+      <div class="step-label">Step 1</div>
+      <div class="mode-toggle">
+        <button id="modeDescribeBtn" class="active" onclick="setMode('describe')">Describe it, let AI write it</button>
+        <button id="modeCodeBtn" onclick="setMode('code')">I'll write the code myself</button>
+      </div>
+
+      <div id="describeBlock">
+        <label for="description">What should your tool do?</label>
+        <textarea id="description" placeholder="e.g. Convert a temperature from Celsius to Fahrenheit"></textarea>
+        <div class="row">
+          <button class="secondary" id="draftBtn" onclick="draft()">Draft with AI &rarr;</button>
+        </div>
+      </div>
+
+      <div id="codeBlock" class="hidden">
+        <label for="code">Tool code (one plain Python function, with a docstring)</label>
+        <textarea id="code" class="code" placeholder="def celsius_to_fahrenheit(celsius: float) -> dict:
+    &quot;&quot;&quot;Convert a Celsius temperature to Fahrenheit.&quot;&quot;&quot;
+    return {&quot;fahrenheit&quot;: celsius * 9 / 5 + 32}"></textarea>
+        <p style="font-size:12px;color:var(--ink-muted);margin:6px 0 0;">Only these imports are allowed: random, math, datetime, json, re. No file, network, or subprocess access.</p>
+
+        <div class="step-label" style="margin-top:20px;">Step 2</div>
+        <label for="name">Your name (used to name the deployed server)</label>
+        <input type="text" id="name" placeholder="e.g. jamie" />
+
+        <div class="row">
+          <button class="primary" id="deployBtn" onclick="deploy()">Deploy &rarr;</button>
+        </div>
+        <div class="status" id="status"></div>
+        <div id="resultBox"></div>
+      </div>
+    </div>
+
+    <footer>Powered by <code>launcher/</code> &middot; same validation + least-privilege IAM as every other path into this demo</footer>
+  </div>
+
+<script>
+let mode = "describe";
+
+function setMode(m) {
+  mode = m;
+  document.getElementById("modeDescribeBtn").classList.toggle("active", m === "describe");
+  document.getElementById("modeCodeBtn").classList.toggle("active", m === "code");
+  document.getElementById("describeBlock").classList.toggle("hidden", m !== "describe");
+  document.getElementById("codeBlock").classList.toggle("hidden", m !== "code" && !document.getElementById("code").value);
+}
+
+async function checkSession() {
+  const res = await fetch("/api/session");
+  const { logged_in } = await res.json();
+  document.getElementById("loggedOut").classList.toggle("hidden", logged_in);
+  document.getElementById("builder").classList.toggle("hidden", !logged_in);
+  document.getElementById("authArea").innerHTML = logged_in
+    ? '<button class="secondary" onclick="logout()">Sign out</button>'
+    : "";
+  if (!logged_in) {
+    document.getElementById("codeBlock").classList.add("hidden");
+    document.getElementById("describeBlock").classList.remove("hidden");
+  }
+}
+
+async function logout() {
+  await fetch("/logout", { method: "POST" });
+  checkSession();
+}
+
+async function draft() {
+  const description = document.getElementById("description").value.trim();
+  if (!description) return;
+  const btn = document.getElementById("draftBtn");
+  btn.disabled = true;
+  btn.textContent = "Drafting...";
+  try {
+    const res = await fetch("/api/draft", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ description }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    document.getElementById("code").value = data.code;
+    document.getElementById("name").value = document.getElementById("name").value || "";
+    document.getElementById("codeBlock").classList.remove("hidden");
+    document.getElementById("code").scrollIntoView({ behavior: "smooth", block: "center" });
+  } catch (err) {
+    alert("Couldn't draft code: " + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Draft with AI →";
+  }
+}
+
+async function deploy() {
+  const name = document.getElementById("name").value.trim();
+  const code = document.getElementById("code").value.trim();
+  const statusEl = document.getElementById("status");
+  const resultBox = document.getElementById("resultBox");
+  resultBox.innerHTML = "";
+  if (!name || !code) {
+    statusEl.textContent = "Add your name and the tool code first.";
+    statusEl.className = "status";
+    return;
+  }
+
+  const btn = document.getElementById("deployBtn");
+  btn.disabled = true;
+  statusEl.className = "status spin";
+  statusEl.textContent = "Deploying -- this takes about a minute (new ECS task + CloudFront domain)...";
+
+  try {
+    const res = await fetch("/api/deploy", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ attendee_name: name, tool_code: code }),
+    });
+    const data = await res.json();
+    statusEl.textContent = "";
+    if (data.error) {
+      resultBox.innerHTML = `<div class="result err"><b>Deploy failed</b><div>${escapeHtml(data.error)}</div></div>`;
+    } else {
+      resultBox.innerHTML = `
+        <div class="result ok">
+          <b>&#127881; Your MCP server is live</b>
+          <div class="url-box">
+            <code>${escapeHtml(data.url)}</code>
+            <button class="secondary" onclick="navigator.clipboard.writeText('${escapeHtml(data.url)}')">Copy</button>
+          </div>
+        </div>`;
+    }
+  } catch (err) {
+    statusEl.textContent = "";
+    resultBox.innerHTML = `<div class="result err"><b>Deploy failed</b><div>${escapeHtml(err.message)}</div></div>`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+checkSession();
+</script>
+</body>
+</html>
