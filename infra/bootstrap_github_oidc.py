@@ -193,6 +193,7 @@ def ensure_role(iam, account_id, region, repo, role_name, bucket_name, provider_
                     f"arn:aws:ecr:{region}:{account_id}:repository/mcp-launcher",
                     f"arn:aws:ecr:{region}:{account_id}:repository/mcp-attendee-base",
                     f"arn:aws:ecr:{region}:{account_id}:repository/mcp-builder-web",
+                    f"arn:aws:ecr:{region}:{account_id}:repository/mcp-finance-chat-web",
                 ],
             },
             {
@@ -222,9 +223,11 @@ def ensure_role(iam, account_id, region, repo, role_name, bucket_name, provider_
                     f"arn:aws:ecs:{region}:{account_id}:service/mcp-demo-cluster/mcp-finance-server",
                     f"arn:aws:ecs:{region}:{account_id}:service/mcp-demo-cluster/mcp-launcher",
                     f"arn:aws:ecs:{region}:{account_id}:service/mcp-demo-cluster/mcp-builder-web",
+                    f"arn:aws:ecs:{region}:{account_id}:service/mcp-demo-cluster/mcp-finance-chat-web",
                     f"arn:aws:ecs:{region}:{account_id}:task-definition/mcp-finance-server:*",
                     f"arn:aws:ecs:{region}:{account_id}:task-definition/mcp-launcher:*",
                     f"arn:aws:ecs:{region}:{account_id}:task-definition/mcp-builder-web:*",
+                    f"arn:aws:ecs:{region}:{account_id}:task-definition/mcp-finance-chat-web:*",
                     f"arn:aws:ecs:{region}:{account_id}:task/mcp-demo-cluster/*",
                 ],
             },
@@ -302,6 +305,7 @@ def ensure_role(iam, account_id, region, repo, role_name, bucket_name, provider_
                     f"arn:aws:iam::{account_id}:role/mcp-attendee-ecs-task",
                     f"arn:aws:iam::{account_id}:role/launcher-ecs-task",
                     f"arn:aws:iam::{account_id}:role/builder-web-ecs-task",
+                    f"arn:aws:iam::{account_id}:role/finance-chat-web-ecs-task",
                 ],
             },
             {
@@ -316,6 +320,7 @@ def ensure_role(iam, account_id, region, repo, role_name, bucket_name, provider_
                     f"arn:aws:logs:{region}:{account_id}:log-group:/ecs/mcp-finance-server*",
                     f"arn:aws:logs:{region}:{account_id}:log-group:/ecs/mcp-launcher*",
                     f"arn:aws:logs:{region}:{account_id}:log-group:/ecs/mcp-builder-web*",
+                    f"arn:aws:logs:{region}:{account_id}:log-group:/ecs/mcp-finance-chat-web*",
                 ],
             },
             {
