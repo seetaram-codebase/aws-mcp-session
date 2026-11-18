@@ -12,11 +12,13 @@ facts, and sources.
 | `server/` | Speaker's own reference demo -- a Personal Finance Guide MCP server (FastMCP), OAuth 2.1-protected via AWS Cognito. Built live on stage in the "Build: FastMCP server" segment; also what's deployed to ECS (see `infra/terraform/ecs.tf`). |
 | `kickstart/` | What attendees clone for the live hands-on segment. Generic OAuth-protected FastMCP template + README -- add your own tool, connect your IDE, done. Also has `submit.py` (step 7): sends your tool to `launcher/` to go live on its own dedicated ECS server. |
 | `launcher/` | The "MCP Builder" -- an always-on FastMCP server whose one tool, `submit_server`, takes an attendee's validated tool code and provisions a brand new ECS task + CloudFront domain for it via boto3 (no Terraform/GitHub Actions per attendee). `attendee_base/` is the one shared Docker image every attendee server reuses. |
-| `electron-client/` | A standalone desktop chat agent -- Bedrock Claude reasoning + the MCP server's tools over the same OAuth flow, no IDE involved. The "MCP isn't just an IDE feature" demo. |
+| `builder-web/` | Click-to-deploy front end for `launcher/` -- describe a tool or paste code, click Deploy, get a live MCP server back. No terminal needed; browser-based OAuth login against the Launcher via Dynamic Client Registration. |
+| `electron-client/` | A standalone desktop chat agent -- Bedrock Claude reasoning + the MCP server's tools over the same OAuth flow, no IDE involved. The "MCP isn't just an IDE feature" demo -- can also call `submit_server` directly from chat, with an approval step before anything deploys. |
 | `infra/` | Provisions the single, shared Cognito User Pool (OAuth Authorization Server) plus, now, the ECS Fargate + ALB + CloudFront deployment of `server/`. Cognito: a one-shot `boto3` script, or Terraform (what CI uses). ECS: Terraform only. |
 | `.github/workflows/cognito-infra.yml` | Manual (`workflow_dispatch`) pipeline for the Cognito pool: plan/apply/destroy, OIDC to AWS, no stored access keys. |
 | `.github/workflows/deploy-mcp-ecs.yml` | Manual pipeline that builds `server/`'s Docker image, pushes to ECR, and applies the same Terraform state with the new image tag -- rolls the ECS service. |
 | `session-outline.html` / `.txt`, `session-cfp.txt`, `talk.txt.txt` | The talk content itself: abstract, agenda, corrected facts, sources. |
+| `presentation.html` | The actual slide deck -- self-contained, keyboard-navigable (arrows, `N` for speaker notes, `F` for fullscreen). |
 
 ## Running the Cognito infra
 
